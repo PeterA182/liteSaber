@@ -21,18 +21,20 @@ def unpack_innings(game_tree):
     finished = []
     game_root = game_tree.getroot()
     for game in game_root:
-        game_dict = {k: v for k, v in game.attrib.items()}
+        game_dict = {"game_{}".format(k): v for k, v in game.attrib.items()}
         for inning in game:
-            inning_dict = {k: v for k, v in inning.attrib.items()}
+            inning_dict = {'inning_{}'.format(k): v for
+                           k, v in inning.attrib.items()}
             for atbat in inning:
-                atbat_dict = {k: v for k, v in atbat.attrib.items()}
+                atbat_dict = {'atbat_{}'.format(k): v for k, v in atbat.attrib.items()}
                 if atbat.tag == 'action':
                     continue
                 try:
                     pitches = pd.concat(
                         objs=[
-                            pd.DataFrame({k: [v] for k, v in pitch.attrib.items()})
-                            for pitch in atbat if pitch.tag == 'pitch'
+                            pd.DataFrame({"pitch_{}".format(k): [v] for k, v in
+                                          pitch.attrib.items()}) for pitch in
+                            atbat if pitch.tag == 'pitch'
                         ],
                         axis=0
                     )
@@ -216,8 +218,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2016, month=6, day=24)
-    max_date = dt.datetime(year=2016, month=11, day=15)
+    min_date = dt.datetime(year=2015, month=3, day=24)
+    max_date = dt.datetime(year=2015, month=5, day=1)
 
     # Teams
     teams = []
