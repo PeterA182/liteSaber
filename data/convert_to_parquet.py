@@ -46,7 +46,7 @@ def move_folders(source, destination, file_keys, remove_previous=False):
 if __name__ == "__main__":
 
     # Base path
-    path = "/users/peteraltamura/Documents/"
+    path = "/Volumes/Transcend/gameday/"
 
     # Get list of dirs containing files
     dirs = os.listdir(path)
