@@ -183,24 +183,27 @@ def scrape_game_date(date):
             print(E)
             pass
 
-
     if not os.path.exists(base_dest + '{}/'.format(date_url.replace("/", ""))):
         os.makedirs(base_dest + '{}/'.format(date_url.replace("/", "")))
+
     with open(base_dest + '{}/log_file.txt'.format(date_url.replace("/", "")), 'w+') as log:
         log.write("\n".join(str(L) for L in game_links))
         log.close()
-    date_games = pd.concat(date_games, axis=0)
-    date_games.to_csv(base_dest + '{}/boxscore.csv'.format(date_url.replace("/", "")),
-                      index=False)
-    batting = pd.concat(batting, axis=0)
-    batting.to_csv(base_dest + '{}/batting.csv'.format(date_url.replace("/", "")),
-                   index=False)
-    pitching = pd.concat(pitching, axis=0)
-    pitching.to_csv(base_dest + '{}/pitching.csv'.format(date_url.replace("/", "")),
-                    index=False)
-    innings = pd.concat(innings, axis=0)
-    innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
-                   index=False)
+    try:
+        date_games = pd.concat(date_games, axis=0)
+        date_games.to_csv(base_dest + '{}/boxscore.csv'.format(date_url.replace("/", "")),
+                          index=False)
+        batting = pd.concat(batting, axis=0)
+        batting.to_csv(base_dest + '{}/batting.csv'.format(date_url.replace("/", "")),
+                       index=False)
+        pitching = pd.concat(pitching, axis=0)
+        pitching.to_csv(base_dest + '{}/pitching.csv'.format(date_url.replace("/", "")),
+                        index=False)
+        innings = pd.concat(innings, axis=0)
+        innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
+                       index=False)
+    except ValueError as VE:
+        print("     no games on day")
 
     #
     # GAME_EVENTS
@@ -213,8 +216,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=7, day=1)
-    max_date = dt.datetime(year=2018, month=7, day=31)
+    min_date = dt.datetime(year=2016, month=6, day=24)
+    max_date = dt.datetime(year=2016, month=11, day=15)
 
     # Teams
     teams = []
@@ -227,6 +230,7 @@ if __name__ == "__main__":
              for i in range((max_date-min_date).days+1)]
 
     for dd in dates:
+        print("Scraping games from: {}".format(str(dd)))
         scrape_game_date(dd)
 
 
