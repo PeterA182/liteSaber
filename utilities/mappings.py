@@ -12,7 +12,6 @@ maps = {
         'h': 'hit',
         'hbp': 'hit_by_pitch',
         'hr': 'home_run',
-        'lob': 'left_on_base',
-
+        'lob': 'left_on_base'
     }
 }
