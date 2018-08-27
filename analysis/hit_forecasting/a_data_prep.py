@@ -7,12 +7,6 @@ import numpy as np
 import datetime as dt
 from utilities import methods as utils
 
-from sklearn.base import clone
-from sklearn.metrics import f1_score, r2_score
-from sklearn.model_selection import KFold
-from sklearn.ensemble import RandomForestRegressor
-from utilities.mappings import maps as colmaps
-from lifelines import KaplanMeierFitter, CoxPHFitter
 pd.set_option("display.max_columns", 500)
 pd.set_option("display.max_rows", 200)
 
