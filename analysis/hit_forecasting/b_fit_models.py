@@ -11,6 +11,7 @@ from sklearn.base import clone
 from sklearn.metrics import f1_score, r2_score
 from sklearn.model_selection import KFold
 from sklearn.ensemble import RandomForestRegressor
+from a_data_prep import CONFIG
 #from utilities.mappings import maps as colmaps
 from lifelines import KaplanMeierFitter, CoxPHFitter
 pd.set_option("display.max_columns", 500)
