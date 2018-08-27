@@ -20,15 +20,18 @@ def unpack_innings(game_tree):
     """
     finished = []
     game_root = game_tree.getroot()
-    for game in game_root:
-        game_dict = {"game_{}".format(k): v for k, v in game.attrib.items()}
-        for inning in game:
-            inning_dict = {'inning_{}'.format(k): v for
-                           k, v in inning.attrib.items()}
-            for atbat in inning:
+    game_dict = {"game_{}".format(k): v for k, v in game_root.attrib.items()}
+    for inning_full in game_root:
+        inning_full_dict = {'inning_{}'.format(k): v for k, v
+                            in inning_full.attrib.items()}
+        for inning_half in inning_full:
+            side = inning_half.tag
+
+            for atbat in inning_half:
                 atbat_dict = {'atbat_{}'.format(k): v for k, v in atbat.attrib.items()}
                 if atbat.tag == 'action':
                     continue
+
                 try:
                     pitches = pd.concat(
                         objs=[
@@ -40,7 +43,7 @@ def unpack_innings(game_tree):
                     )
                     for k, v in atbat_dict.items():
                         pitches[k] = v
-                    for k, v in inning_dict.items():
+                    for k, v in inning_full_dict.items():
                         pitches[k] = v
                     for k, v in game_dict.items():
                         pitches[k] = v
@@ -58,7 +61,7 @@ def unpack_innings(game_tree):
                     )
                     for k, v in atbat_dict.items():
                         runners[k] = v
-                    for k, v in inning_dict.items():
+                    for k, v in inning_full_dict.items():
                         runners[k] = v
                     for k, v in game_dict.items():
                         runners[k] = v
@@ -218,8 +221,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2015, month=3, day=24)
-    max_date = dt.datetime(year=2015, month=5, day=1)
+    min_date = dt.datetime(year=2016, month=6, day=21)
+    max_date = dt.datetime(year=2016, month=11, day=1)
 
     # Teams
     teams = []
