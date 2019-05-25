@@ -42,9 +42,23 @@ def process_date_games(path):
     )
 
     # Process Boxscore
-    
+    df = pd.read_parquet(path+"boxscore.parquet")
+    df = process_date_boxscore(df)
+    df.to_parquet(
+        CONFIG.get('paths').get('normalized') + \
+        path.split("/")[-2] + "/" + \
+        "boxscore.parquet"
+    )
 
     # Process Innings
+    df = pd.read_parquet(path+"innings.parquet")
+    df = process_date_innings(df)
+    df.to_parquet(
+        CONFIG.get('paths').get('normalized') + \
+        path.split("/")[-2] + "/" + \
+        "innings.parquet"
+    )
+    
 
 if __name__ == "__main__":
 
@@ -58,7 +72,6 @@ if __name__ == "__main__":
              for i in range((max_date-min_date).days+1)]
 
     # Establish path
-    print(CONFIG)
     path = CONFIG.get('paths').get('raw')
     for dd in dates:
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
