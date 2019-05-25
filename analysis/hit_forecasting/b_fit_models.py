@@ -214,3 +214,4 @@ if __name__ == "__main__":
 
     # Average COD
     cod_mean = np.mean(list(cv_results.values()))
+    print(cod_mean)

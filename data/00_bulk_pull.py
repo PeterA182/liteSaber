@@ -3,7 +3,7 @@ __author__ = 'Peter Altamura'
 import os
 import sys
 sys.path.append("E:\\liteSaberPackage\\")
-import urllib
+import urllib2
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ETREE
 import numpy as np
@@ -96,9 +96,10 @@ def scrape_game_date(date):
         str(date.day).zfill(2)
     )
     full_url = base_url + date_url
-
+    print(full_url)
+    
     # Generate list of gid links
-    test_resp = urllib.request.urlopen(full_url)
+    test_resp = urllib2.urlopen(full_url)
     req = BeautifulSoup(test_resp)
     game_links = [x for x in req.find_all('a') if
                   str(x.get('href'))[7:10] == 'gid']
@@ -111,11 +112,11 @@ def scrape_game_date(date):
     pitching = []
     innings = []
     for gid in game_links:
-
+        print("        {}".format(str(gid)))
         try:
             game_id = str(gid.get('href'))[7:]
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "boxscore.json"
-            data_master = urllib.request.urlopen(rbs)
+            data_master = urllib2.urlopen(rbs)
             data_master = pd.read_json(data_master)
             data_master = data_master['data'].iloc[0]
 
@@ -129,7 +130,7 @@ def scrape_game_date(date):
             )
             df_box['game_id'] = game_id
             date_games.extend([df_box])
-
+            
             # Batting Details
             df_bat = data_master['batting']
             for team in df_bat:
@@ -153,7 +154,7 @@ def scrape_game_date(date):
                 )
                 team_batting['game_id'] = game_id
                 batting.append(team_batting)
-
+            
             # Pitching Details
             df_ptch = data_master['pitching']
             for team in df_ptch:
@@ -181,7 +182,7 @@ def scrape_game_date(date):
 
             # Inning Details
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
-            innings_ret = unpack_innings(ETREE.parse(urllib.request.urlopen(rbs)))
+            innings_ret = unpack_innings(ETREE.parse(urllib2.urlopen(rbs)))
             innings.append(innings_ret)
 
         except Exception as E:
@@ -221,8 +222,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2016, month=6, day=21)
-    max_date = dt.datetime(year=2016, month=11, day=1)
+    min_date = dt.datetime(year=2019, month=2, day=1)
+    max_date = dt.datetime(year=2019, month=5, day=22)
 
     # Teams
     teams = []
