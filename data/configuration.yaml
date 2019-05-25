@@ -1,0 +1,6 @@
+paths:
+  raw: /Volumes/Transcend/gameday/
+  normalized: /Volumes/Transcend/gameday_normalized/
+  reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
+filenames:
+  data_dict: data_dictionary.csv
