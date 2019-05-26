@@ -3,6 +3,7 @@ import sys
 import datetime as dt
 import pandas as pd
 import numpy as np
+import utilities as util
 CONFIG = util.load_config()
 
 
