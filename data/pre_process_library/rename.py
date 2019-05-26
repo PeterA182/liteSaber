@@ -15,7 +15,7 @@ def rename_table(data, tablename):
         CONFIG.get('filenames').get('data_dict'),
         dtype=str
     )
-    rename_dict = dict_.loc[dict_['filename'] == tablename, :]
+    rename_dict = dict_.loc[dict_['file'] == tablename, :]
     rename_dict = rename_dict.loc[rename_dict['map'].notnull(), :]
     rename_dict = rename_dict.set_index('col')['map'].to_dict()
     data.rename(
