@@ -8,6 +8,42 @@ from pre_process_library import rename as names
 CONFIG = util.load_config()
 
 
+def process_date_batting(data):
+    """
+    """
+
+    # Rename
+    data = names.rename_table(data, tablename='batting')
+    return data
+
+
+def process_date_pitching(data):
+    """
+    """
+
+    # Rename Pitching
+    data = names.rename_table(data, tablename="pitching")
+    return data
+
+
+def process_date_boxscore(data, tablename='boxscore'):
+    """
+    """
+
+    # Rename Boxscore
+    data = names.rename_table(data, tablename='boxscore')
+    return data
+
+
+def process_date_innings(data, tablename='innings'):
+    """
+    """
+
+    # Rename innings
+    data = names.rename_table(data, tablename='innings')
+    return data
+
+
 def process_date_games(path):
     """
     Script for applying processing methods to one date's worth of games
