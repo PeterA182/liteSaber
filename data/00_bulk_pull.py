@@ -120,6 +120,9 @@ def scrape_game_date(date):
             data_master = pd.read_json(data_master)
             data_master = data_master['data'].iloc[0]
 
+            # ------------------------------
+            # ------------------------------
+            #
             # Boxscore (data_master is a dictionary)
             df_box = pd.DataFrame({'gameId': [game_id]})
             df_box = pd.concat(
@@ -130,7 +133,8 @@ def scrape_game_date(date):
             )
             df_box['game_id'] = game_id
             date_games.extend([df_box])
-            
+
+            # ------------------------------
             # Batting Details
             df_bat = data_master['batting']
             for team in df_bat:
@@ -155,6 +159,7 @@ def scrape_game_date(date):
                 team_batting['game_id'] = game_id
                 batting.append(team_batting)
             
+            # ------------------------------
             # Pitching Details
             df_ptch = data_master['pitching']
             for team in df_ptch:
@@ -180,6 +185,7 @@ def scrape_game_date(date):
                 team_pitching['game_id'] = game_id
                 pitching.append(team_pitching)
 
+            # ------------------------------
             # Inning Details
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
             innings_ret = unpack_innings(ETREE.parse(urllib2.urlopen(rbs)))
