@@ -3,7 +3,7 @@ __author__ = 'Peter Altamura'
 import os
 import sys
 sys.path.append("E:\\liteSaberPackage\\")
-import urllib2
+import urllib.request
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ETREE
 import numpy as np
@@ -99,7 +99,7 @@ def scrape_game_date(date):
     print(full_url)
     
     # Generate list of gid links
-    test_resp = urllib2.urlopen(full_url)
+    test_resp = urllib.request.urlopen(full_url)
     req = BeautifulSoup(test_resp)
     game_links = [x for x in req.find_all('a') if
                   str(x.get('href'))[7:10] == 'gid']
@@ -116,7 +116,7 @@ def scrape_game_date(date):
         try:
             game_id = str(gid.get('href'))[7:]
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "boxscore.json"
-            data_master = urllib2.urlopen(rbs)
+            data_master = urllib.request.urlopen(rbs)
             data_master = pd.read_json(data_master)
             data_master = data_master['data'].iloc[0]
 
@@ -188,7 +188,8 @@ def scrape_game_date(date):
             # ------------------------------
             # Inning Details
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
-            innings_ret = unpack_innings(ETREE.parse(urllib2.urlopen(rbs)))
+            innings_ret = unpack_innings(ETREE.parse(urllib.request.urlopen(rbs)))
+            innings_ret['game_id'] = game_id
             innings.append(innings_ret)
 
         except Exception as E:
@@ -202,18 +203,30 @@ def scrape_game_date(date):
         log.write("\n".join(str(L) for L in game_links))
         log.close()
     try:
+        # Boxscore
         date_games = pd.concat(date_games, axis=0)
         date_games.to_csv(base_dest + '{}/boxscore.csv'.format(date_url.replace("/", "")),
                           index=False)
+        date_games.to_parquet(base_dest + '{}/boxscore.parquet'.format(date_url.replace("/", "")))
+
+        # Batting
+        
         batting = pd.concat(batting, axis=0)
         batting.to_csv(base_dest + '{}/batting.csv'.format(date_url.replace("/", "")),
                        index=False)
+        batting.to_parquet(base_dest + '{}/batting.parquet'.format(date_url.replace("/", "")))
+
+        # Pitching
         pitching = pd.concat(pitching, axis=0)
         pitching.to_csv(base_dest + '{}/pitching.csv'.format(date_url.replace("/", "")),
                         index=False)
+        pitching.to_parquet(base_dest + '{}/pitching.parquet'.format(date_url.replace("/", "")))
+
+        # Innings
         innings = pd.concat(innings, axis=0)
         innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
                        index=False)
+        innings.to_parquet(base_dest + '{}/innings.parquet'.format(date_url.replace("/", "")))
     except ValueError as VE:
         print("     no games on day")
 
@@ -228,8 +241,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=2, day=1)
-    max_date = dt.datetime(year=2019, month=5, day=22)
+    min_date = dt.datetime(year=2018, month=6, day=1)
+    max_date = dt.datetime(year=2018, month=11, day=1)
 
     # Teams
     teams = []
