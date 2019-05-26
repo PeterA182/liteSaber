@@ -3,7 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import utilities as util
-CONFIG = utilities.load_config()
+CONFIG = util.load_config()
 
 def rename_table(data, tablename):
     """
