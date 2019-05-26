@@ -9,7 +9,7 @@ def rename_table(data, tablename):
 
     # Get dictionary
     dict_ = pd.read_csv(
-        CONFNIG.get('paths').get('reference') + \
+        CONFIG.get('paths').get('reference') + \
         CONFIG.get('filenames').get('data_dict'),
         dtype=str
     )
