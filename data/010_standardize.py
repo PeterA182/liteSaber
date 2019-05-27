@@ -16,10 +16,14 @@ def process_date_batting(data):
 
     # Rename
     data = names.rename_table(data, tablename='batting')
+    data = names.remap_dtypes(data, tablename='batting')
+
     # Add Teams
-    print(data.columns)
-    sjfsjkfksjd
-    data = add.add_team(data, path)
+    data = add.add_team(data, path, 'batter')
+
+    # Add Date
+    data = add.add_game_date(data, path)
+
     return data
 
 
@@ -29,6 +33,14 @@ def process_date_pitching(data):
 
     # Rename Pitching
     data = names.rename_table(data, tablename="pitching")
+    data = names.remap_dtypes(data, tablename='pitching')
+
+    # Add Teams
+    data = add.add_team(data, path, 'pitcher')
+
+    # Add Date
+    data = add.add_game_date(data, path)
+    
     return data
 
 
@@ -76,7 +88,6 @@ def process_date_games(path):
     
     # Process batting
     df = pd.read_parquet(path+"batting.parquet")
-    df = add.add_team(df, path)
     df = process_date_batting(df)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \

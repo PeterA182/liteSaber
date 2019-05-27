@@ -24,4 +24,21 @@ def rename_table(data, tablename):
         inplace=True
     )
     return data
-    
+
+
+def remap_dtypes(data, tablename):
+    """
+    """
+
+    # Get Dictionary
+    dict_ = pd.read_csv(
+        CONFIG.get('paths').get('reference') + \
+        CONFIG.get('filenames').get('data_dict'),
+        dtype=str
+    )
+    dt_dict = dict_.loc[dict_['file'] == tablename, :]
+    dt_dict = dt_dict.loc[dt_dict['dtype'].notnull(), :]
+    dt_dict = dt_dict.set_index('map')['dtype'].to_dict()
+    for col, dt in dt_dict.items():
+        data.loc[:, col] = data[col].astype(dt)
+    return data
