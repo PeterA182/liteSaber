@@ -241,7 +241,7 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=6, day=1)
+    min_date = dt.datetime(year=2018, month=7, day=12)
     max_date = dt.datetime(year=2018, month=11, day=1)
 
     # Teams
