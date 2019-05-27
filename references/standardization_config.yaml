@@ -1,0 +1,21 @@
+standardization:
+  team:
+    offense:
+      boxscore_metrics:
+        - hits_in_last_5_games
+        - runs_in_last_5_games
+        - hits_in_last_10_games
+        - runs_in_last_10_games
+        - runs_per_game_last_10
+        - games_in_last_10_days
+        - runs_per_hit
+        - runs_per_at_bat
+        - wins_season_to_date
+        - losses_season_to_date
+        - wins_last_10_games
+        - losses_last_10_games
+        - wins_per_series
+        - hits_per_inning
+        - runs_per_inning
+        - bb_per_inning
+        - at_bats_per_inning
