@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import datetime as dt
+import inspect
 import utilities as util
 from pre_process_library import rename as names
 from pre_process_library import additions as add
@@ -15,9 +16,10 @@ def process_date_batting(data):
 
     # Rename
     data = names.rename_table(data, tablename='batting')
-
     # Add Teams
-    data = 
+    print(data.columns)
+    sjfsjkfksjd
+    data = add.add_team(data, path)
     return data
 
 
@@ -74,7 +76,7 @@ def process_date_games(path):
     
     # Process batting
     df = pd.read_parquet(path+"batting.parquet")
-    df = add.add_teams(data, path)
+    df = add.add_team(df, path)
     df = process_date_batting(df)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
