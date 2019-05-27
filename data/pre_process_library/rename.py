@@ -5,6 +5,7 @@ import numpy as np
 import utilities as util
 CONFIG = util.load_config()
 
+
 def rename_table(data, tablename):
     """
     """
