@@ -5,6 +5,7 @@ import numpy as np
 import datetime as dt
 import utilities as util
 from pre_process_library import rename as names
+from pre_process_library import additions as add
 CONFIG = util.load_config()
 
 
@@ -14,6 +15,9 @@ def process_date_batting(data):
 
     # Rename
     data = names.rename_table(data, tablename='batting')
+
+    # Add Teams
+    data = 
     return data
 
 
@@ -57,10 +61,20 @@ def process_date_games(path):
         None
     """
 
+    # Get Files
     files_ = os.listdir(path)
 
+    # Create desination dir
+    if not os.path.exists(
+            CONFIG.get('paths').get('normalized') + \
+            path.split("/")[-2]+"/"
+    ):
+        os.makedirs(CONFIG.get('paths').get('normalized') + \
+                    path.split("/")[-2]+"/")
+    
     # Process batting
     df = pd.read_parquet(path+"batting.parquet")
+    df = add.add_teams(data, path)
     df = process_date_batting(df)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
@@ -108,8 +122,8 @@ if __name__ == "__main__":
              for i in range((max_date-min_date).days+1)]
 
     # Establish path
-    path = CONFIG.get('paths').get('raw')
     for dd in dates:
+        path = CONFIG.get('paths').get('raw')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
         path += dd         
         print(path)
