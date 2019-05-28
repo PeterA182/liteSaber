@@ -40,22 +40,20 @@ def process_date_games(path):
     """
 
     # Read in 4 standardized tabes
-    df_batting = pd.read_parquet(path+"batting.parquet")
-    df_pitching = pd.read_parquet(path+"pitching.parquet")
-    df_boxscore = pd.read_parquet(path+"boxscore.parquet")
-    df_innings = pd.read_parquet(path+"innings.parquet")
-
-    # Establish metrics table for game date team
-    metrics_table = \
-        df_batting[['gameId', 'team']].drop_duplicates(inplace=False)
-
+    df_game_team_mx = pd.read_parquet(path+"game_metrics.parquet")
     
     # Iterate over metrics
     # ------------------------------
     
-    # Add Batting
-    metrics_table = add_batting_metrics(metrics_table, df_batting)
-                       
+    # Add Game-Team Batting
+    df_game_team_mx = bats.hits_in_last_5_games(df_game_team_mx)
+    df_game_team_mx = bats.hits_in_last_10_games(df_game_team_mx)
+    df_game_team_mx = bats.runs_in_last_5_games(df_game_team_mx)
+    df_game_team_mx = bats.runs_in_last_10_games(df_game_team_mx)
+    df_game_team_mx = bats.runs_per_game_last_10(df_game_team_mx)
+    df_game_team_mx = bats.runs_per_hit_last_5(df_game_team_rx)
+    df_game_team_mx = bats.runs_per_hit_last_10(df_game_team_rx)
+    
 
     return 0
 
@@ -73,7 +71,7 @@ if __name__ == "__main__":
 
     # Establish path
     for dd in dates:
-        path = CONFIG.get('paths').get('normalized')
+        path = CONFIG.get('paths').get('game_metrics')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
         path += dd         
         print(path)
