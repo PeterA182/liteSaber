@@ -52,3 +52,77 @@ def add_game_date(data, path):
             day=int(x[2]))
     )
     return data
+
+
+def add_starting_pitcher_flag(data):
+    """
+    """
+
+    # Inning Start Pitcher
+    df_inning_1 = data.loc[
+        ((data['inning_num'] == 1) &
+         (data['atbat_o'] == 0)),
+    :]
+
+    # Min atbat_start per pitcher
+    min_pitcher_tfs = df_inning_start.groupby(
+        by=['atbat_pitcher'],
+        as_index=False
+    ).agg({'atbat_start_tfs_zulu': 'min'})
+    min_pitcher_tfs.rename(
+        columns={'atbat_start_tfs_zulu': 'pitcher_min_tfs'},
+        inplace=True
+    )
+    
+    # Merge back to first inning
+    df_inning_1 = pd.merge(
+        df_inning_1, min_pitcher_tfs,
+        how='left',
+        on=['atbat_pitcher']
+    )
+    df_inning_1['starting_pitcher_flag'] = (
+        df_inning['atbat_start_tfs_zulu'] ==
+        df_inning['pitcher_min_tfs']
+    ).astype(int)
+    df_inning_1 = df_inning_1[['atbat_pitcher', 'starting_pitcher_flag']]\
+        .drop_duplicates(inplace=False)
+    
+    # Merge back to entire game
+    data = pd.merge(
+        data, df_inning,
+        how='left',
+        on=['atbat_pitcher'],
+        validate='m:1'
+    )
+    return data
+
+
+def add_inning_half(data):
+    """
+    """
+
+    # Get min tfs zulu per inning
+    min_tfs = data.groupby(
+        by=['inning_num'],
+        as_index=False
+    ).agg({'atbat_start_tfs_zulu': 'min'})
+    min_inning_tfs_dict = min_tfs.set_index('inning_num')\
+        ['atbat_start_tfs_zulu'].to_dict()
+
+    # Flag top of inning
+    data.loc[:, 'inning_side'] = np.NaN
+    data.loc[(
+        data['atbat_start_tfs_zulu'] ==
+        data['inning_num'].map(min_inning_tfs_dict)
+    ), 'inning_side'] = 'top'
+
+    # Flag where outs above == 3 and inning top not flagged
+    data.loc[(
+        (data['inning_side'].isnull())
+        &
+        (data['atbat_o'].shift(-1) == 3)
+    ), 'inning_side'] == 'bottom'
+    data.loc[:, 'inning_side'] = data['inning_side'].ffill()
+
+def add_atbat_team():
+    return data

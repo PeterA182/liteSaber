@@ -38,7 +38,9 @@ def remap_dtypes(data, tablename):
     )
     dt_dict = dict_.loc[dict_['file'] == tablename, :]
     dt_dict = dt_dict.loc[dt_dict['dtype'].notnull(), :]
+    dt_dict = dt_dict.loc[dt_dict['map'].isin(list(data.columns)), :]
     dt_dict = dt_dict.set_index('map')['dtype'].to_dict()
+    print(sorted(data.columns))
     for col, dt in dt_dict.items():
         data.loc[:, col] = data[col].astype(dt)
     return data

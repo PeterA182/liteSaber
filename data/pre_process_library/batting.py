@@ -79,15 +79,15 @@ def runs_per_hit_last_5(data):
     """
 
     # Add necessary other metrics
-    if 'team_runs_in_last_5_games' not in data.columns:
-        data = runs_in_last_10_games(data)
-    if 'team_hits_in_last_5_games' not in data.columns:
+    if 'team_runs_last_5_games' not in data.columns:
+        data = runs_in_last_5_games(data)
+    if 'team_hits_last_5_games' not in data.columns:
         data = hits_in_last_5_games(data)
 
     # Divide
     data['runs_per_hit_last_5'] = (
-        data['team_runs_in_last_5_games'] /
-        data['game_hits_in_last_5_games']
+        data['team_runs_last_5_games'] /
+        data['team_hits_last_5_games']
     )
     return data
 
@@ -97,15 +97,15 @@ def runs_per_hit_last_10(data):
     """
 
     # Add necessary other metrics
-    if 'team_runs_in_last_10_games' not in data.columns:
+    if 'team_runs_last_10_games' not in data.columns:
         data = runs_in_last_10_games(data)
-    if 'team_hits_in_last_10_games' not in data.columns:
+    if 'team_hits_last_10_games' not in data.columns:
         data = hits_in_last_5_games(data)
 
     # Divide
     data['runs_per_hit_last_10'] = (
-        data['team_runs_in_last_10_games'] /
-        data['game_hits_in_last_10_games']
+        data['team_runs_last_10_games'] /
+        data['team_hits_last_10_games']
     )
     return data
 
