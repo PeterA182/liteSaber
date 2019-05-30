@@ -37,7 +37,7 @@ def process_date_games(data):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=3, day=1)
+    min_date = dt.datetime(year=2018, month=8, day=1)
     max_date = dt.datetime(year=2019, month=9, day=1)
 
     # Iterate over years

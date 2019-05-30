@@ -69,6 +69,15 @@ def game_level_pitching_metrics(data):
     return game_metrics
 
 
+def game_level_inning_metrics(data):
+    """
+    """
+
+    game_metrics = data.loc[:, [
+        'gameId', 'team', 'atbat_pitcher', 'starting_pitcher_flag'
+    ]].drop_duplicates(inplace=False)
+    return game_metrics
+
 
 def assemble_game_team_metrics(metrics_tables):
     """
@@ -131,7 +140,9 @@ def process_date_games(path):
     metrics.append(pitching_game_metrics)
     
     # Game Team Level Inning Details
-
+    inning_game_metrics = game_level_inning_metrics(df_innings)
+    metrics.append(inning_game_metrics)
+    
     # Assemble Game Team Metrics
     game_metrics = assemble_game_team_metrics(metrics)
 

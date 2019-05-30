@@ -31,5 +31,6 @@ def fip_in_last_5_app(data):
         'atbat_num',
         'pitch_id' # (NOT NULL)
         'atbat_pitcher',
-        'atbat_p_throws', 
+        'atbat_p_throws'
+    ]
     

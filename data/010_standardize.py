@@ -60,8 +60,9 @@ def process_date_innings(data, tablename='innings'):
     # Rename innings
     data = names.rename_table(data, tablename='innings')
     data = add.add_game_date(data, path)
-    data = add.add_starting_pitcher(data)
+    data = add.add_starting_pitcher_flag(data)
     data = add.add_inning_half(data)
+    data = add.add_team(data, path, 'inning')
     return data
 
 
@@ -128,7 +129,7 @@ def process_date_games(path):
         df.to_csv(
             CONFIG.get('paths').get('normalized') + \
             path.split("/")[-2] + "/" + \
-            "innings.parquet",
+            "innings.csv",
             index=False
         )
     
@@ -136,7 +137,7 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=8, day=15)
+    min_date = dt.datetime(year=2018, month=8, day=1)
     max_date = dt.datetime(year=2018, month=9, day=1)
 
     # Iterate over years
@@ -149,5 +150,6 @@ if __name__ == "__main__":
         path = CONFIG.get('paths').get('raw')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
         path += dd         
-        print(path)
-        process_date_games(path)
+        if os.path.exists(path) > 0:
+            print(path)
+            process_date_games(path)
