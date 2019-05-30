@@ -40,7 +40,7 @@ def process_date_pitching(data):
 
     # Add Date
     data = add.add_game_date(data, path)
-    
+
     return data
 
 
@@ -59,6 +59,9 @@ def process_date_innings(data, tablename='innings'):
 
     # Rename innings
     data = names.rename_table(data, tablename='innings')
+    data = add.add_game_date(data, path)
+    data = add.add_starting_pitcher(data)
+    data = add.add_inning_half(data)
     return data
 
 
@@ -121,13 +124,20 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "innings.parquet"
     )
+    if 'day_01' in path:
+        df.to_csv(
+            CONFIG.get('paths').get('normalized') + \
+            path.split("/")[-2] + "/" + \
+            "innings.parquet",
+            index=False
+        )
     
 
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=8, day=1)
-    max_date = dt.datetime(year=2018, month=8, day=2)
+    min_date = dt.datetime(year=2018, month=8, day=15)
+    max_date = dt.datetime(year=2018, month=9, day=1)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]

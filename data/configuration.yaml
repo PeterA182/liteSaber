@@ -1,7 +1,8 @@
 paths:
   raw: /Volumes/Transcend/gameday/
   normalized: /Volumes/Transcend/gameday_normalized/
-  game_metrics: /Volumes/Transcend/game_team_metrics/
+  game_team_stats: /Volumes/Transcend/game_team_stats/
+  game_team_metrics: /Volumes/Transcend/game_team_metrics/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv

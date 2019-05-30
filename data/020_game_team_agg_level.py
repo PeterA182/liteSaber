@@ -111,11 +111,11 @@ def process_date_games(path):
 
     # Create desination dir
     if not os.path.exists(
-        CONFIG.get('paths').get('game_metrics') + \
+        CONFIG.get('paths').get('game_team_stats') + \
         path.split("/")[-2]+"/"
     ):
         os.makedirs(
-            CONFIG.get('paths').get('game_metrics') + \
+            CONFIG.get('paths').get('game_team_stats') + \
             path.split("/")[-2]+"/"
         )
 
@@ -129,7 +129,7 @@ def process_date_games(path):
     # Game Team Level Pitching Metrics
     pitching_game_metrics = game_level_pitching_metrics(df_pitching)
     metrics.append(pitching_game_metrics)
-
+    
     # Game Team Level Inning Details
 
     # Assemble Game Team Metrics
@@ -137,17 +137,24 @@ def process_date_games(path):
 
     # Save out
     game_metrics.to_parquet(
-        CONFIG.get('paths').get('game_metrics') + \
+        CONFIG.get('paths').get('game_team_stats') + \
         path.split("/")[-2]+"/" + \
-        "game_metrics.parquet"
+        "game_team_stats.parquet"
     )
+    if 'day_01' in path:
+        game_metrics.to_csv(
+            CONFIG.get('paths').get('game_team_stats') + \
+            path.split("/")[-2] + "/" + \
+            "game_team_stats.csv",
+            index=False
+        )
 
 
 if __name__ == "__main__":
 
     # Run Log
     min_date = dt.datetime(year=2018, month=8, day=1)
-    max_date = dt.datetime(year=2018, month=8, day=2)
+    max_date = dt.datetime(year=2018, month=9, day=1)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
