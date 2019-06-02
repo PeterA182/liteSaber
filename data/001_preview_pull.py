@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import urllib.request
 from bs4 import BeautifulSoup
@@ -12,14 +13,43 @@ def extract_probables(data):
     Extracts probable home and away pitchers from atv_preview.xml
     """
 
-    resp = resp.getroot()
-    pitcher_prev_name = resp[0][0][0][2][0][1][0].text
-    pitcher_prev_stat = resp[0][0][0][2][0][1][1].text
-    pitcher_prev_side = resp[0][0][0][2][0][1][2].text
-    df = pd.DataFrame({'gameId': [game_id],
-                       'probableStarterName': [pitcher_prev_name],
+    resp = data.getroot()
+
+    # Home
+    try:
+        pitcher_prev_name = resp[0][0][0][2][0][1][0].text
+    except IndexError as IE:
+        pitcher_prev_name = np.NaN
+    try:
+        pitcher_prev_stat = resp[0][0][0][2][0][1][1].text
+    except IndexError as IE:
+        pitcher_prev_stat = np.NaN
+    try:
+        pitcher_prev_side = resp[0][0][0][2][0][1][2].text
+    except IndexError as IE:
+        pitcher_prev_side = np.NaN
+    df_home = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
                        'probableStarterStat': [pitcher_prev_stat],
                        'probableStarterSide': [pitcher_prev_side]})
+
+    # Away
+    try:
+        pitcher_prev_name = resp[0][0][0][2][1][1][0].text
+    except IndexError as IE:
+        pitcher_prev_name = np.NaN
+    try:
+        pitcher_prev_stat = resp[0][0][0][2][1][1][1].text
+    except IndexError as IE:
+        pitcher_prev_stat = np.NaN
+    try:
+        pitcher_prev_side = resp[0][0][0][2][1][1][2].text
+    except IndexError as IE:
+        pitcher_prev_side = np.NaN
+    df_away = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
+                            'probableStarterStat': [pitcher_prev_stat],
+                            'probableStarterSide': [pitcher_prev_side]})
+    df = pd.concat(objs=[df_home, df_away], axis=0)
+    print(df)
     return df
 
 
@@ -37,7 +67,7 @@ def scrape_game_previews(date):
 
     # Generate list of gid links
     test_resp = urllib.request.urlopen(full_url)
-    req = BeautifulSoup(test_rep)
+    req = BeautifulSoup(test_resp)
     game_links = [x for x in req.find_all('a') if
                   str(x.get('href'))[7:10] == 'gid']
 
@@ -50,9 +80,10 @@ def scrape_game_previews(date):
             rbs = full_url + "/" + str(gid.get('href'))[7:] + 'atv_preview.xml'
             resp = urllib.request.urlopen(rbs)
             resp = ETREE.parse(resp)
-            df = extract_probables(resp)            
+            df = extract_probables(resp)
+            df['gameId'] = game_id
             probable_starters.append(df)
-        except: ValueError as VE:
+        except ValueError as VE:
             pitcher_prev = pd.DataFrame()
             pass
     try:
@@ -79,7 +110,7 @@ if __name__ == "__main__":
     # COnfiguration
 
     # Run Log
-    date = dt.datetime.now()
+    date = dt.datetime(year=2019, month=6, day=3)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
@@ -89,4 +120,4 @@ if __name__ == "__main__":
     dates = [date, date+dt.timedelta(days=1)]
     for dd in dates:
         print("Getting Probable Starters From: {}".format(str(dd)))
-        scrape_game_preview(dd)
+        scrape_game_previews(dd)
