@@ -67,92 +67,170 @@ def add_starting_pitcher_flag(data):
     """
     """
 
-    # Astype Float
-    data.loc[:, 'inning_num'] = data['inning_num'].astype(float)
-    data.loc[:, 'atbat_o'] = data['atbat_o'].astype(float)
-    
-    # Inning Start Pitcher
-    df_inning_1 = data.loc[
-        ((data['inning_num'] == 1) &
-         (data['atbat_o'] == 0)),
-    :]
+    # Assure inning half
+    if 'inning_half' not in data.columns:
+        data = add_inning_half(data)
 
-    # Min atbat_start per pitcher
-    min_pitcher_tfs = df_inning_1.groupby(
-        by=['atbat_pitcher'],
+    # Min atbat_num
+    data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)
+    df = data.loc[data['inning_num'].astype(float) == 1, :].groupby(
+        by=['game_id', 'inning_half'],
         as_index=False
-    ).agg({'atbat_start_tfs': 'min'})
-    min_pitcher_tfs.rename(
-        columns={'atbat_start_tfs': 'pitcher_min_tfs'},
-        inplace=True
-    )
-    
-    # Merge back to first inning
-    df_inning_1 = pd.merge(
-        df_inning_1, min_pitcher_tfs,
+    ).agg({'atbat_num': 'min'})
+    df.rename(columns={'atbat_num': 'atbat_num_min'}, inplace=True)
+
+    # Merge back
+    df = pd.merge(
+        data, df,
         how='left',
-        on=['atbat_pitcher']
-    )
-    df_inning_1['starting_pitcher_flag'] = (
-        df_inning_1['atbat_start_tfs'] ==
-        df_inning_1['pitcher_min_tfs']
-    ).astype(int)
-    df_inning_1 = df_inning_1.loc[df_inning_1['starting_pitcher_flag'] == 1, :]
-    df_inning_1 = df_inning_1[['atbat_pitcher', 'starting_pitcher_flag']]\
-        .drop_duplicates(inplace=False)
-    
-    # Merge back to entire game
-    data = pd.merge(
-        data, df_inning_1,
-        how='left',
-        on=['atbat_pitcher'],
+        on=['game_id', 'inning_half'],
         validate='m:1'
     )
-    data['starting_pitcher_flag'].fillna(0, inplace=True)
+    df = df.loc[:, [
+        'game_id', 'inning_half', 'atbat_num', 'atbat_num_min',
+        'atbat_pitcher'
+    ]].drop_duplicates(inplace=False)
+    df.loc[:, 'home_starting_pitcher'] = np.NaN
+    df.loc[(
+        (df['atbat_num'] == df['atbat_num_min'])
+        &
+        (df['inning_half'] == 'top')
+    ), 'away_starting_pitcher'] = df['atbat_pitcher']
+    df.loc[(
+        (df['atbat_num'] == df['atbat_num_min'])
+         &
+        (df['inning_half'] == 'bottom')
+    ), 'home_starting_pitcher'] = df['atbat_pitcher'] 
+    home_sp = df.loc[df['home_starting_pitcher'].notnull(), :]
+    home_sp = home_sp[['game_id', 'home_starting_pitcher']].\
+        drop_duplicates(inplace=False)
+    away_sp = df.loc[df['away_starting_pitcher'].notnull(), :]
+    away_sp = away_sp[['game_id', 'away_starting_pitcher']].\
+        drop_duplicates(inplace=False)
+
+    # Merge back
+    data = pd.merge(
+        data,
+        home_sp,
+        how='left',
+        on=['game_id'],
+        validate='m:1'
+    )
+    data = pd.merge(
+        data,
+        away_sp,
+        how='left',
+        on=['game_id'],
+        validate='m:1'
+    )
+    
+    t = """
+    df = data.loc[data['inning_num'].astype(float) == 1, :]
+    df.loc[:, 'atbat_num'] = df['atbat_num'].astype(float)
+    df = df.groupby(
+        by=['game_id', 'inning_half'],
+        as_index=False
+    ).agg({'atbat_num': 'min'})
+    df.rename(columns={'atbat_num': 'atbat_num_min'}, inplace=True)    
+    starters = pd.merge(
+        data,
+        df,
+        how='left',
+        on=['game_id', 'inning_half'],
+        validate='m:1'
+    )
+    starters = starters.loc[starters['inning_num'].astype(float) == 1, :]
+    starters = starters.loc[:, [
+        'game_id', 'atbat_num', 'inning_half',
+        'atbat_num_min', 'atbat_pitcher'
+    ]].drop_duplicates(inplace=False)
+    starters = starters.loc[(
+        starters['atbat_num'].astype(float) == starters['atbat_num_min']
+    ), :]
+    starters = starters.loc[:, ['game_id', 'inning_half', 'atbat_pitcher']].\
+        drop_duplicates(inplace=False)
+    starters.loc[starters['inning_half'] == 'top',
+                 'away_starting_pitcher'] = starters['atbat_pitcher']
+    starters.loc[starters['inning_half'] == 'bottom',
+                 'home_starting_pitcher'] = starters['atbat_pitcher']
+    starters = starters.drop_duplicates(
+        subset=['game_id', 'away_starting_pitcher', 'home_starting_pitcher'],
+        inplace=False
+    )
+    assert sum((starters['home_starting_pitcher'].notnull()) &
+               (starters['away_starting_pitcher'].notnull())) == 0
+    home_starter = starters.loc[starters['home_starting_pitcher'].notnull(), :]
+    home_starter = home_starter[['game_id', 'home_starting_pitcher']].drop_duplicates()
+    data = pd.merge(
+        data,
+        home_starter,
+        how='left',
+        on=['game_id'],
+        validate='m:1'
+    )
+    
+    away_starter = starters.loc[starters['away_starting_pitcher'].notnull(), :]
+    away_starter = away_starter[['game_id', 'away_starting_pitcher']].drop_duplicates()
+    data = pd.merge(
+        data,
+        away_starter,
+        how='left',
+        on=['game_id'],
+        validate='m:1'
+    )"""
     return data
+
 
 
 def add_inning_half(data):
     """
     """
+
+    # Check
+    if 'inning_half' in data.columns:
+        return data
+
+    # Add np.NaN
+    data.loc[:, 'inning_half'] = np.NaN
+
+    # DTypes
     data.loc[:, 'atbat_start_tfs'] = data['atbat_start_tfs'].astype(float)
     data.loc[:, 'inning_num'] = data['inning_num'].astype(float)
     data.loc[:, 'atbat_o'] = data['atbat_o'].astype(float)
+    data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)
 
-    # Get min tfs zulu per inning
-    min_tfs = data.groupby(
+    # min atbat_num per inning
+    min_atbat_num_per_inning = data.groupby(
         by=['game_id', 'inning_num'],
         as_index=False
-    ).agg({'atbat_start_tfs': 'min'})
-    min_tfs['key_term'] = list(zip(min_tfs.game_id, min_tfs.inning_num))
-    min_inning_tfs_dict = min_tfs.set_index('key_term')\
-        ['atbat_start_tfs'].to_dict()
-
-    # Flag top of inning
-    #print(sum(data['game_id'].isnull()))
-    #print(sum(data['inning_num'].isnull()))
-    data['key_term'] = list(zip(data.game_id, data.inning_num))
-    data.loc[:, 'inning_half'] = np.NaN
-    data.loc[(
-        data['atbat_start_tfs'] ==
-        data['key_term'].map(min_inning_tfs_dict)
-    ), 'inning_half'] = 'top'
-
-    # Flag where outs above == 3 and inning top not flagged
+    ).agg({'atbat_num': 'min'})
+    min_atbat_num_per_inning.rename(
+        columns={'atbat_num': 'atbat_num_min'}, inplace=True)
+    data = pd.merge(
+        data,
+        min_atbat_num_per_inning[['game_id', 'inning_num', 'atbat_num_min']],
+        how='left',
+        on=['game_id', 'inning_num'],
+        validate='m:1'
+    )
+    data.loc[
+        data['atbat_num'] == data['atbat_num_min'], 'inning_half'] = 'top'
+    data.drop(labels=['atbat_num_min'], axis=1, inplace=True)
     data.sort_values(
-        by=['game_id', 'inning_num', 'atbat_o'],
+        by=['game_id', 'inning_num', 'atbat_num', 'atbat_o'],
         ascending=True,
         inplace=True
     )
+    
+    # Flag start of bottom
     data.loc[(
         (data['inning_half'].isnull())
         &
-        (data['atbat_o'].shift(1)==3)
+        (data['atbat_o'].shift(1) == 3)
         &
-        (data['atbat_o'] == 0)
+        (data['atbat_o'].isin([0, 1]))
     ), 'inning_half'] = 'bottom'
     data.loc[:, 'inning_half'] = data['inning_half'].ffill()
-    data.drop(labels=['key_term'], axis=1, inplace=True)
     return data
 
 
