@@ -60,8 +60,8 @@ def process_date_innings(data, tablename='innings'):
     # Rename innings
     data = names.rename_table(data, tablename='innings')
     data = add.add_game_date(data, path)
-    data = add.add_starting_pitcher_flag(data)
     data = add.add_inning_half(data)
+    data = add.add_starting_pitcher_flag(data)
     data = add.add_team(data, path, 'inning')
     return data
 
