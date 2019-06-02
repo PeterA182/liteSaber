@@ -73,8 +73,8 @@ def game_level_inning_metrics(data):
     """
     """
 
-    game_metrics = data.loc[:, [
-        'gameId', 'team', 'atbat_pitcher', 'starting_pitcher_flag'
+    game_metrics = data[[
+        'gameId', 'team', 'home_starting_pitcher', 'away_starting_pitcher'
     ]].drop_duplicates(inplace=False)
     return game_metrics
 
