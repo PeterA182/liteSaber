@@ -66,8 +66,8 @@ def game_level_pitching_metrics(data):
     for gameId in list(pd.Series.unique(data['gameId'])):
         game = data.loc[data['gameId'] == gameId, :]
         for teamFlag in ['home', 'away']:
-            side = data.loc[data['pitcherTeamFlag'] == teamFlag, :]
-            for i, pid in enumerate(list(pd.Series.unique(data['pitcherId']))):
+            side =  game.loc[game['pitcherTeamFlag'] == teamFlag, :]
+            for i, pid in enumerate(list(pd.Series.unique(side['pitcherId']))):
                 curr = side.loc[side['pitcherId'] == pid, :][pitcher_appr_stats + ['gameId']]
                 curr.rename(
                     columns={
@@ -245,4 +245,3 @@ if __name__ == "__main__":
         print(path)
         process_date_games(path)
 
-    
