@@ -26,7 +26,8 @@ def process_date_games(data):
     df_game_team_mx = bats.runs_per_hit_last_10(df_game_team_mx)
 
     # Add Game-Team Pitching
-    df_game_team_mx = pitch.pitcher_id_indicator(df_game_team_mx)
+    #df_game_team_mx = pitch.pitcher_id_indicator(df_game_team_mx)
+    
     
     # Return
     return df_game_team_mx

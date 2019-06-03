@@ -60,13 +60,13 @@ pitching,bf,pitcherBF,float
 pitching,blown_save,pitcherBlownSave,str
 pitching,bs,pitcherSeason_blownSaves,float
 pitching,content,,
-pitching,er,pitchingStaffER,float
-pitching,era,pitchingStaffERA,float
+pitching,er,pitcherER,float
+pitching,era,pitcherERA,float
 pitching,game_id,gameId,str
 pitching,game_score,gameScore,float
 pitching,h,pitcherHitsAllowed,float
-pitching,hld,pitcherSeasonHolds,float
-pitching,hr,pitchingStaffHR,float
+pitching,hld,pitcherHolds,float
+pitching,hr,pitcherHR,float
 pitching,id,pitcherId,str
 pitching,l,pitcherSeasonLosses,float
 pitching,loss,pitcherLossFlag,str
@@ -85,7 +85,7 @@ pitching,s_ip,pitcherSeasonIP,float
 pitching,s_r,pitcherSeasonR,float
 pitching,s_so,pitcherSeasonSO,float
 pitching,save,pitcherSaveFlag,str
-pitching,so,pitchingStaffSO,float
+pitching,so,pitcherSO,float
 pitching,sv,pitcherSeasonSaves,float
 pitching,team_bb,pitcherTeamBB,float
 pitching,team_bf,pitcherTeamBF,float

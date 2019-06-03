@@ -55,6 +55,31 @@ def game_level_pitching_metrics(data):
     """
     """
 
+    # Pitcher Table to expand lateral pitchers
+    pitcher_metrics = []
+
+    # Iterate over pitcherId
+    pitcher_appr_stats = ['pitcherBBAllowed', 'pitcherBF', 'pitcherHitsAllowed',
+                          'pitcherRunsAllowed', 'pitcherStrikes', 'pitcherOuts',
+                          'pitcherHR', 'pitcherRunsAllowed', 'pitcherSO',
+                          'pitcherTeamFlag']
+    for gameId in list(pd.Series.unique(data['gameId'])):
+        game = data.loc[data['gameId'] == gameId, :]
+        for teamFlag in ['home', 'away']:
+            side = data.loc[data['pitcherTeamFlag'] == teamFlag, :]
+            for i, pid in enumerate(list(pd.Series.unique(data['pitcherId']))):
+                curr = side.loc[side['pitcherId'] == pid, :][pitcher_appr_stats + ['gameId']]
+                curr.rename(
+                    columns={
+                        col: '{}_pitcher_{}_'.format(teamFlag, str(i))+col for col in
+                        pitcher_appr_stats
+                    },
+                    inplace=True
+                )
+                pitcher_metrics.append(curr)
+    pitcher_metrics = pd.concat(objs=pitcher_metrics, axis=1)
+    
+    # Get Game Metrics
     game_metrics = data.groupby(
         by=['gameId', 'team'],
         as_index=False
@@ -62,11 +87,36 @@ def game_level_pitching_metrics(data):
            'pitcherBBAllowed': {'game_bb_sum': 'sum',
                                 'game_pitcher_bb_mean': 'mean',
                                 'game_pitcher_bb_std': 'std',
-                                'game_pitcher_bb_var': 'var'}})
+                                'game_pitcher_bb_var': 'var'},
+           'pitcherBF': {'game_bf_sum': 'sum',
+                         'game_bf_mean': 'mean',
+                         'game_bf_min': 'min',
+                         'game_bf_max': 'max'},
+           'pitcherHitsAllowed': {'game_hits_allowed': 'sum',
+                                  'game_pitcher_hits_allowed_mean': 'mean',
+                                  'game_pitcher_hits_allowed_min': 'min',
+                                  'game_pitcher_hits_allowed_max': 'max'},
+           'pitcherRunsAllowed': {'game_pitcher_runs_allowed': 'sum',
+                                  'game_pitcher_runs_allowed_mean': 'mean',
+                                  'game_pitcher_runs_allowed_min': 'min',
+                                  'game_pitcher_runs_allowed_max': 'max'},
+           'pitcherStrikes': {'game_pitcher_strikes': 'sum',
+                              'game_pitcher_strikes_mean': 'mean',
+                              'game_pitcher_strikes_min': 'min',
+                              'game_pitcher_strikes_max': 'max'},
+           'pitcherOuts': {'game_pitcher_outs': 'sum',
+                           'game_pitcher_outs_mean': 'mean',
+                           'game_pitcher_outs_min': 'min',
+                           'game_pitcher_outs_max': 'max'},
+           'pitcherHR': {'game_pitcher_hr': 'sum',
+                                'game_pitcher_hr_mean': 'mean',
+                                'game_pitcher_hr_min': 'min',
+                                'game_pitcher_hr_max': 'max'}
+    })
     game_metrics.reset_index(inplace=True)
     game_metrics.columns = [x[0] if x[1] == '' else x[1] for x in
                             game_metrics.columns]
-    return game_metrics
+    return pitcher_metrics, game_metrics
 
 
 def game_level_inning_metrics(data):
@@ -136,7 +186,7 @@ def process_date_games(path):
     metrics.append(batting_game_metrics)
 
     # Game Team Level Pitching Metrics
-    pitching_game_metrics = game_level_pitching_metrics(df_pitching)
+    pitcher_metrics, pitching_game_metrics = game_level_pitching_metrics(df_pitching)
     metrics.append(pitching_game_metrics)
     
     # Game Team Level Inning Details
@@ -145,6 +195,7 @@ def process_date_games(path):
     
     # Assemble Game Team Metrics
     game_metrics = assemble_game_team_metrics(metrics)
+    game_metrics.drop(labels=['index_x', 'index_y'], axis=1, inplace=True)
 
     # Save out
     game_metrics.to_parquet(
@@ -157,6 +208,20 @@ def process_date_games(path):
             CONFIG.get('paths').get('game_team_stats') + \
             path.split("/")[-2] + "/" + \
             "game_team_stats.csv",
+            index=False
+        )
+
+    # Save out pitcher_metrics
+    pitcher_metrics.to_parquet(
+        CONFIG.get('paths').get('game_team_stats') + \
+        path.split("/")[-2]+"/" + \
+        "game_pitchers_stats.parquet"
+    )
+    if 'day_01' in path:
+        pitcher_metrics.to_csv(
+            CONFIG.get('paths').get('game_team_stats') + \
+            path.splot("/")[-2]+"/"+\
+            "game_pitchers_stats.csv",
             index=False
         )
 
