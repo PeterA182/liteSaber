@@ -3,6 +3,7 @@ paths:
   normalized: /Volumes/Transcend/gameday_normalized/
   game_team_stats: /Volumes/Transcend/game_team_stats/
   batter_stats: /Volumes/Transcend/gameday_batter_records/
+  pitcher_stats: /Volumes/Transcend/gameday_pitcher_records/
   game_team_metrics: /Volumes/Transcend/game_team_metrics/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
