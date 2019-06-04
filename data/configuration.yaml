@@ -5,6 +5,16 @@ paths:
   batter_stats: /Volumes/Transcend/gameday_batter_records/
   pitcher_stats: /Volumes/Transcend/gameday_pitcher_records/
   game_team_metrics: /Volumes/Transcend/game_team_metrics/
+  final_datasets: /Volumes/Transcend/full_datasets/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv
+
+  # 001_retro_add_game_id     -->
+  # 00_bul_pull               -->     gameday/
+  # 010_standardize           -->     gameday_normalized/
+  # 020_batter_records        -->     gameday_batter_records/
+  # 021_pitcher_records       -->     gameday_pitcher_records/
+  # 022_team_batting_records  -->     gameday_team_batting_records/
+  # 023_team_pitching_records -->     gameday_team_pitching_records/
+  # 030_assemble_schedules    -->     gameday_schedules/
