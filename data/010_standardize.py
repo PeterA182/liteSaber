@@ -137,8 +137,8 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=8, day=1)
-    max_date = dt.datetime(year=2018, month=9, day=1)
+    min_date = dt.datetime(year=2018, month=3, day=1)
+    max_date = dt.datetime(year=2018, month=11, day=1)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -149,7 +149,8 @@ if __name__ == "__main__":
     for dd in dates:
         path = CONFIG.get('paths').get('raw')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
-        path += dd         
-        if os.path.exists(path) > 0:
-            print(path)
+        path += dd
+        try:
             process_date_games(path)
+        except:
+            continue
