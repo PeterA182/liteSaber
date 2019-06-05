@@ -11,14 +11,50 @@ CONFIG = util.load_config()
 pd.set_option('display.max_columns', 500)
 
 
-def extract_game_scores(data):
+def extract_inning_lines(data):
     """
     """
 
-    resp = data.getroot()
+    # innings
+    inning_lines_game = []
+    df_ls = data['data']['game']
+    for inning_dict in df_ls['linescore']:
+        df = pd.DataFrame({k: [v] for k, v in inning_dict.items()})
+        inning_lines_game.append(df)
+    
+    inning_lines_game = pd.concat(inning_lines_game, axis=0)
+    return inning_lines_game
 
-    # GameId
-    score = 
+def extract_home_runs(data):
+    """
+    """
+
+    # Home Runs
+    home_runs_game = []
+    for player, info in df_ls['home_runs'].items():
+        df = pd.DataFrame({
+            k: [v] for k, v in info.items()
+        })
+        home_runs_game.append(df)
+
+    home_runs_game = pd.concat(home_runs_game, axis=0)
+    return home_runs_game
+
+
+def extract_pitcher_summaries(data):
+    """
+    """
+
+    # Pitcher Summaries
+    pitcher_summaries_game = []
+    for pitcher_ in [x for x in df_ls.keys() if x[-7:] == 'pitcher']:
+        curr = df_ls[pitcher_]
+        df = pd.DataFrame({
+            k: [v] for k, v in curr.items()
+        })
+        pitcher_summaries_game.append(df)
+    pitcher_summaries_game = pd.concat(pitcher_summaries_game, axis=0)
+    return pitcher_summaries_game
 
 
 def scrape_game_scoreboards(date):
@@ -37,39 +73,90 @@ def scrape_game_scoreboards(date):
                   str(x.get('href'))[7:10] == 'gid']
 
     #
-    # SCOREBOARD
-    #
-    scoreboards = []
+    # Line Score, Home Runs, Pitcher Summaries
+    inning_lines = []
+    home_runs = []
+    pitcher_summaries = []
+    final_summary = []
     for gid in game_links:
         print("        {}".format(str(gid)))
-        try:
-            game_id = str(gid.get('href'))[7:]
-            rbs = full_url + "/" + str(gid.get('href'))[7:] + "miniscoreboard.xml"
-            resp = urllib.request.urlopen(rbs)
-            resp = ETREE.parse(resp)
-            df = extract_game_score(resp)
-            df['gameId'] = game_id
-            scoreboards.append(df)
-        except ValueError as VE:
-            score = pd.DataFrame()
-            pass
-    try:
-        scoreboards = pd.concat(
-            objs=scoreboards,
-            axis=0
-        )
-    except ValueError as VE:
-        scoreboards = pd.DataFrame()
-        pass
 
-    scoreboards.to_csv(
-        base_dest + "{}/scoreboards.csv".format(date_url.replace("/", "")),
+        # Inning Line Scores, Home Runs, Pitchers
+        game_id = str(gid.get('href'))[7:]
+        rbs = full_url + "/" + str(gid.get('href'))[7:] + "linescore.json"
+        resp = urllib.request.urlopen(rbs)
+        resp = pd.read_json(resp)
+
+        # Line Scores
+        try:
+            df = extract_inning_lines(resp)
+            df['gameId'] = game_id
+            inning_lines.append(df)
+        except ValueError as VE:
+            pass
+
+        # Home Runs
+        try:
+            df = extract_home_runs(resp)
+            df['gameId'] = game_id
+            home_runs.append(df)
+        except ValueError as VE:
+            pass
+
+        # Pitcher Summaries
+        try:
+            df = extract_pitcher_summaries(resp)
+            df['gameId'] = game_id
+            pitcher_summaries.append(df)
+        except ValueError as VE:
+            pass
+
+        # Final Summary
+        try:
+            df = extract_final_summary(resp)
+            df['gameId'] = game_id
+        except ValueError as VE:
+            pass
+        
+            
+        
+    try:
+        inning_lines = pd.concat(inning_lines, axis=0)
+        home_runs = pd.concat(home_runs, axis=0)
+        pitcher_summaries = pd.concat(pitcher_summaries, axis=0)
+
+    # Innign Lines
+    inning_lines.to_csv(
+        base_dest + "{}/inning_lines.csv".format(date_url.replace("/", "")),
         index=False
     )
-    scoreboards.to_parquet(
+    inning_lines.to_parquet(
         base_dest +
-        '{}/scoreboards.parquet'.format(date_url.replace("/", ""))
+        '{}/inning_lines.parquet'.format(date_url.replace("/", ""))
     )
+
+    # Home Runs
+    home_runs.to_csv(
+        base_dest + "{}/home_runs.csv".format(date_url.replace("/", "")),
+        index=False
+    )
+    home_runs.to_parquet(
+        base_dest +
+        '{}/home_runs.parquet'.format(date_url.replace("/", ""))
+    )
+
+    # Pitcher Summaries
+    pitcher_summaries.to_csv(
+        base_dest + "{}/pitcher_summaries.csv".format(date_url.replace("/", "")),
+        index=False
+    )
+    pitcher_summaries.to_parquet(
+        base_dest +
+        '{}/pitcher_summaries.parquet'.format(date_url.replace("/", ""))
+    )
+    
+    
+    
 
 if __name__ == "__main__":
 
