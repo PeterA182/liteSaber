@@ -92,10 +92,11 @@ def get_full_pitching_stats(team):
     for fname in fnames:
         df = pd.read_parquet(fname)
         df = df.loc[df['gameId'].str.contains(team), :]
-        gameId = df.iloc['gameId']
-        if gameId.split("_")[4] == team:
+        assert pd.Series.nunique(df['gameId']) == 1
+        gameId = df['gameId'].iloc[0]
+        if team in gameId.split("_")[4]:
             df = df.loc[df['pitcherTeamFlag'] == 'away', :]
-        elif gameId.split("_")[5] == team:
+        elif team in gameId.split("_")[5]:
             df = df.loc[df['pitcherTeamFlag'] == 'home', :]
         else:
             raise
@@ -333,7 +334,8 @@ if __name__ == "__main__":
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
             team_pitching = team_pitching.loc[
-                team_pitching['gameId'].isin(list(set(df_base_curr['gameId']))),
+                team_pitching['gameId'].isin(
+                    list(set(df_base_curr['gameId']))),
             :]
             team_pitching.sort_values(
                 by=['gameDate'],
