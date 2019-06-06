@@ -36,7 +36,7 @@ batting,sac,batterSacBunts,float
 batting,sb,batterStolenBases,float
 batting,sf,batterSacFlys,float
 batting,slg,batterSluggingPct,float
-batting,so,strikeOuts,float
+batting,so,batterStrikeOuts,float
 batting,t,batterTriples,float
 batting,team_ab,batterTeam_AB,float
 batting,team_avg,batterTEAM_AVG,float

@@ -10,8 +10,8 @@ if __name__ == "__main__":
 
     # ----------
     # Years
-    min_year = 2017
-    max_year = 2017
+    min_year = 2018
+    max_year = 2018
     if min_year == max_year:
         years = [min_year]
     else:
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         )
 
         df_master = df.loc[:, [
-            'gameId', 'gameDate', 'pitcherId'
+            'gameId', 'gameDate', 'pitcherId', 'pitcherTeamFlag'
         ]].drop_duplicates(inplace=False)
 
         # Add Inning

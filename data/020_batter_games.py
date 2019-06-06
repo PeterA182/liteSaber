@@ -10,8 +10,8 @@ if __name__ == "__main__":
 
     # ----------
     # Years
-    min_year = 2017
-    max_year = 2017
+    min_year = 2018
+    max_year = 2018
     if min_year == max_year:
         years = [min_year]
     else:
@@ -47,8 +47,8 @@ if __name__ == "__main__":
             'batterAssists', 'batterAB', 'batterFO', 'batterAvg', 'batterBB',
             'batterH', 'batterHBP', 'batterHR', 'batterDoubles',
             'batterErrors', 'batterGroundOuts', 'batterLob', 'batterOBP',
-            'batterOPS', 'batterR', 'batterRBI', 'batterSluggingPct', 'strikeOuts',
-            'batterTriples' 
+            'batterOPS', 'batterR', 'batterRBI', 'batterSluggingPct',
+            'batterStrikeOuts', 'batterTriples' 
         ]
 
         # Get prev 3, 5, 10 batting stats
