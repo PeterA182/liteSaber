@@ -322,17 +322,21 @@ if __name__ == "__main__":
             team_batting = pivot_stats_wide(team_batting,
                                             swing_col='batterId',
                                             metric_cols=batter_metrics)
+            team_batting.rename(columns={'gameId': 'gameId_merge'}, inplace=True)
             df_base_curr = pd.merge(
                 df_base_curr, team_batting,
                 how='left',
                 left_on=['prev_gameid_merge_key'],
-                right_on=['gameId'],
+                right_on=['gameId_merge'],
                 validate='1:1'
             )
-            #df_base_curr.drop(labels=['gameId'], axis=1, inplace=True)
+            df_base_curr.drop(labels=['gameId_merge'], axis=1, inplace=True)
             
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
+            print(team_pitching.columns)
+            print('---------------------')
+            print(df_base_curr.columns)
             team_pitching = team_pitching.loc[
                 team_pitching['gameId'].isin(
                     list(set(df_base_curr['gameId']))),
@@ -350,14 +354,16 @@ if __name__ == "__main__":
             team_pitching = pivot_stats_wide(team_batting,
                                              swing_col='pitcherId',
                                              metric_cols=pitcher_metrics)
+            team_pitching.rename(columns={'gameId': 'gameId_merge'},
+                                 inplace=True)
             df_base_curr = pd.merge(
                 df_base_curr, team_pitching,
                 how='left',
                 left_on=['prev_gameid_merge_key'],
-                right_on=['gameId'],
+                right_on=['gameId_merge'],
                 validate='1:1'
             )
-            #df_base_curr.drop(labels=['gameId'], axis=1, inplace=True)
+            df_base_curr.drop(labels=['gameId_merge'], axis=1, inplace=True)
 
             # Add scores from boxscores
             boxscores = get_full_boxscores(team)
