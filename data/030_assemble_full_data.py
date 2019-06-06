@@ -178,6 +178,7 @@ def pivot_stats_wide(data, swing_col, metric_cols):
         raise
 
     # Pivot Table
+    print(sorted(data.columns))
     player_ids = list(set(data[swing_col]))
     data = data.pivot_table(
         index=['gameId'],
@@ -351,7 +352,7 @@ if __name__ == "__main__":
                 axis=1,
                 inplace=True
             )
-            team_pitching = pivot_stats_wide(team_batting,
+            team_pitching = pivot_stats_wide(team_pitching,
                                              swing_col='pitcherId',
                                              metric_cols=pitcher_metrics)
             team_pitching.rename(columns={'gameId': 'gameId_merge'},
@@ -368,21 +369,25 @@ if __name__ == "__main__":
             # Add scores from boxscores
             boxscores = get_full_boxscores(team)
             boxscores = boxscores.loc[
-                boxscore['gameId'].isin(
+                boxscores['gameId'].isin(
                     list(set(df_base_curr['gameId']))
                 ),
             :]
             boxscores.sort_values(
-                by=['gameDate'], ascending=True, inplace=True
+                by=['date'], ascending=True, inplace=True
             )
+            boxscores.drop(labels=['date'], axis=1, inplace=True)
+            boxscores.rename(columns={'gameId': 'gameId_merge'},
+                             inplace=True)
             df_base_curr = pd.merge(
                 df_base_curr, boxscores,
                 how='left',
                 left_on=['prev_gameid_merge_key'],
-                right_on=['gameId'],
+                right_on=['gameId_merge'],
                 validate='1:1'
             )
-
+            df_base_curr.drop(labels=['gameId_merge'], axis=1,
+                              inplace=True)
             # Add
 
             # Create flag
