@@ -1,12 +1,13 @@
 paths:
-  raw: /Volumes/Transcend/gameday/
-  normalized: /Volumes/Transcend/gameday_normalized/
+  raw: /Volumes/Transcend/00_gameday/
+  normalized: /Volumes/Transcend/010_gameday_normalized/
   game_team_stats: /Volumes/Transcend/game_team_stats/
-  batter_stats: /Volumes/Transcend/gameday_batter_records/
-  pitcher_stats: /Volumes/Transcend/gameday_pitcher_records/
+  batter_stats: /Volumes/Transcend/020_gameday_batter_records/
+  pitcher_stats: /Volumes/Transcend/021_gameday_pitcher_records/
   game_team_metrics: /Volumes/Transcend/game_team_metrics/
   matchup_schedule: /Volumes/Transcend/matchup_schedule/
-  initial_featurespaces: /Volumes/Transcend/gameday_initial_featurespaces/
+  initial_featurespaces: /Volumes/Transcend/030_gameday_initial_featurespaces/
+  full_featurespaces: /Volumes/Transcend/031_gameday_full_featurespaces/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv

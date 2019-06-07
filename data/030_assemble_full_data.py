@@ -16,7 +16,8 @@ def get_batting_games_dates():
                                 d+"/batter_stats.parquet",
                                 columns=['gameId', 'gameDate'])
                 for d in os.listdir(CONFIG.get('paths').get('batter_stats'))
-                if os.path.isfile(CONFIG.get('paths').get('batter_stats')+d+'/batter_stats.parquet')
+                if os.path.isfile(CONFIG.get('paths').get('batter_stats')+d+
+                                  '/batter_stats.parquet')
             ],
             axis=0
     )
@@ -37,7 +38,8 @@ def get_pitching_games_dates():
                                 d+"/pitcher_stats.parquet",
                                 columns=['gameId', 'gameDate'])
                 for d in os.listdir(CONFIG.get('paths').get('pitcher_stats'))
-                if os.path.isfile(CONFIG.get('paths').get('pitcher_stats')+d+'/pitcher_stats.parquet')
+                if os.path.isfile(CONFIG.get('paths').get('pitcher_stats')+d+
+                                  '/pitcher_stats.parquet')
             ],
             axis=0
     )
@@ -59,13 +61,9 @@ def get_full_batting_stats(team):
     fnames = [f for f in fnames if team in f]
     for fname in fnames:
         df = pd.read_parquet(fname)
-        print(df.shape)
-        print(list(set(df['gameId'])))
-        print(team)
         df = df.loc[df['gameId'].str.contains(team), :]
-        print(df.shape)
-        print(list(pd.Series.unique(df['gameId'])))
-        assert pd.Series.nunique(df['gameId']) == 1
+        if pd.Series.nunique(df['gameId']) != 1:
+            return pd.DataFrame()
         gameId = df['gameId'].iloc[0]
         if team in gameId.split("_")[4]:
             df = df.loc[df['batterTeamFlag'] == 'away', :]
@@ -86,13 +84,17 @@ def get_full_pitching_stats(team):
     """
 
     df_pitching = []
-    fnames = [CONFIG.get('paths').get('pitcher_stats')+gid+"/pitcher_stats.parquet"
-              for gid in os.listdir(CONFIG.get('paths').get('pitcher_stats'))]
+    fnames = [CONFIG.get('paths').get('pitcher_stats')+gid+
+              "/pitcher_stats.parquet"
+              for gid in os.listdir(
+                      CONFIG.get('paths').get('pitcher_stats')
+              )]
     fnames = [f for f in fnames if team in f]
     for fname in fnames:
         df = pd.read_parquet(fname)
         df = df.loc[df['gameId'].str.contains(team), :]
-        assert pd.Series.nunique(df['gameId']) == 1
+        if pd.Series.nunique(df['gameId']) != 1:
+            return pd.DataFrame()
         gameId = df['gameId'].iloc[0]
         if team in gameId.split("_")[4]:
             df = df.loc[df['pitcherTeamFlag'] == 'away', :]
@@ -112,15 +114,20 @@ def get_full_boxscores(team):
     """
     """
     df_boxscores = []
-    fnames = [CONFIG.get('paths').get('normalized')+dstr+"/boxscore.parquet"
-              for dstr in os.listdir(CONFIG.get('paths').get('normalized'))
-              if os.path.isfile(CONFIG.get('paths').get('normalized')+
-                                dstr+"/boxscore.parquet")]
+    fnames = [CONFIG.get('paths').get('normalized')+dstr+
+              "/boxscore.parquet"
+              for dstr in os.listdir(
+                      CONFIG.get('paths').get('normalized')
+              )
+              if os.path.isfile(
+                      CONFIG.get('paths').get('normalized')+
+                      dstr+"/boxscore.parquet"
+              )]
     for fname in fnames:
         df = pd.read_parquet(fname)
         df = df.loc[df['gameId'].str.contains(team), :]
         df = df.loc[:, [
-            'gameId', 'away_team_flag', 'home_team_flag',
+            'gameId', 'date', 'away_team_flag', 'home_team_flag',
             'away_wins', 'away_loss', 'home_wins', 'home_loss',
         ]]
         df_boxscores.append(df)
@@ -138,7 +145,8 @@ def get_full_linescore_summaries(team):
     fnames = [
         CONFIG.get('paths').get('raw')+dstr+"/game_linescore_summary.parquet"
         for dstr in os.listdir(CONFIG.get('paths').get('raw')) if
-        os.path.isfile(CONFIG.get('paths').get('raw')+dstr+"/game_linescore_summary.parquet")
+        os.path.isfile(CONFIG.get('paths').get('raw')+dstr+
+                       "/game_linescore_summary.parquet")
     ]
     for fname in fnames:
         df = pd.read_parquet(fname)
@@ -204,12 +212,11 @@ if __name__ == "__main__":
             str(y) for y in np.arange(1967, 2020, 1)
         ]
     ]
-    batter_metrics = ['H', ]
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
                        'SeasonLosses', 'SeasonWins', 'numberPitches',
                        'Outs', 'RunsAllowed', 'Strikes', 'SO']
-    batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H', 'HBP', 'HR',
-                      'Doubles' 'GroundOuts', 'batterLob',
+    batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
+                      'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
                       'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
                       'StrikeOuts', 'Triples']    
 
@@ -279,12 +286,14 @@ if __name__ == "__main__":
         # PREPARATION TO ENSURE ALL MERGES ARE COMPLETE
         # Iterate over teams and apend final table to list
         complete_team_tables = []
+        #for team in teams_list:
         for team in teams_list:
             print("Now creating featurespace for team: {}".format(team))
 
             # --------------------
             # Get sorted list of gameIds for team
-            team_gameids = df_base.loc[df_base['gameId'].str.contains(team), :]
+            team_gameids = df_base.loc[
+                df_base['gameId'].str.contains(team), :]
             team_gameids.sort_values(
                 by=['date'],
                 ascending=True,
@@ -310,6 +319,9 @@ if __name__ == "__main__":
             # --------------------
             # Filter to team games for batting, sort and merge
             team_batting = get_full_batting_stats(team)
+            if team_batting.shape[0] == 0:
+                print("{} batting was empty".format(team))
+                continue
             team_batting = team_batting.loc[
                 team_batting['gameId'].isin(
                     list(set(df_base_curr['gameId']))
@@ -335,9 +347,9 @@ if __name__ == "__main__":
             
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
-            print(team_pitching.columns)
-            print('---------------------')
-            print(df_base_curr.columns)
+            if team_pitching.shape[0] == 0:
+                print("{} pitching was empty".format(team))
+                continue
             team_pitching = team_pitching.loc[
                 team_pitching['gameId'].isin(
                     list(set(df_base_curr['gameId']))),
@@ -373,6 +385,7 @@ if __name__ == "__main__":
                     list(set(df_base_curr['gameId']))
                 ),
             :]
+            print(boxscores.columns)
             boxscores.sort_values(
                 by=['date'], ascending=True, inplace=True
             )
@@ -391,6 +404,12 @@ if __name__ == "__main__":
             # Add
 
             # Create flag
+            try:
+                df_base_curr.drop(labels=['home_team_flag', 'away_team_flag'],
+                                  axis=1,
+                                  inplace=True)
+            except:
+                pass
             df_base_curr.to_parquet(
                 CONFIG.get('paths').get('initial_featurespaces') + \
                 '{}_{}_initial_featurespace.parquet'.format(
