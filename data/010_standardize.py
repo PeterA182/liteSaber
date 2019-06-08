@@ -132,6 +132,24 @@ def process_date_games(path):
             "innings.csv",
             index=False
         )
+
+    # Process Game Linescore Summary
+    df = pd.read_csv(path+"game_linescore_summary.csv", dtype=str)
+    for col in ['home_win', 'home_loss', 'away_win', 'away_loss']:
+        df.loc[:, col] = df[col].astype(float)
+    df.to_parquet(
+        CONFIG.get('paths').get('normalized') + \
+        path.split("/")[-2] + "/" + \
+        "game_linescore_summary.parquet"
+    )
+    if 'day_01' in path:
+        df.to_csv(
+            CONFIG.get('paths').get('normalized') + \
+            path.split("/")[2] + "/" + \
+            "game_linescore_summary.csv",
+            index=False
+        )
+    
     
 
 if __name__ == "__main__":

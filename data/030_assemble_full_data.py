@@ -8,6 +8,71 @@ import utilities as util
 CONFIG = util.load_config()
 
 
+def get_merge_key_dict(data):
+    """
+    """
+
+    # Set dictionary to add to
+    dic = {}
+    
+    # Sort gameIds for each team
+    for team in list(set(
+            list(data['away_code']) +
+            list(data['home_code'])
+    )):
+        
+        team_data = data.loc[data['gameId'].str.contains(team), :]
+        team_data.sort_values(by=['gameId'], ascending=False, inplace=True)
+        team_data.loc[:, 'prevGameId'] = team_data['gameId'].shift(1)
+        team_data.loc[:, 'team_abbrev'] = team
+        print(team)
+        print(np.mean(team_data['gameId'].isnull()))
+        print(np.mean(team_data['team_abbrev'].isnull()))
+        team_data.loc[:, 'zip'] = team_data[['gameId', 'team_abbrev']].apply(tuple, axis=1)
+        team_data = team_data.set_index('zip')['prevGameId'].to_dict()
+        dic.update(team_data)
+
+    return dic
+
+
+def win_loss_by_disposition(data):
+    """
+    """
+
+    # Set dictionary to add to
+    dic = {}
+
+    # List teams
+    teams = list(set(
+        list(set(data['away_code'])) +
+        list(set(data['home_code']))
+    ))
+
+    # Add Date
+    data['gameDate'] = data['gameId'].str[4:14]
+    data['gameDate'] = pd.to_datetime(data['gameDate'], format="%Y_%m_%d")
+
+    # Add Flags (duplicative)
+    data['home_team_winner'] = (data['home_team_runs'] >
+                                data['away_team_runs']).astype(int)
+    data['away_team_winner'] = (data['away_team_runs'] >
+                                data['home_team_runs']).astype(int)
+    tables = []
+    for team in teams:
+        curr = data.loc[data['gameId'].str.contains(team), :]
+        curr.sort_values(by=['gameDate'], ascending=True, inplace=True)
+        curr['home_win_cumsum'] = curr['home_team_winner'].cumsum().shift(1)
+        curr['away_win_cumsum'] = curr['away_team_winner'].cumsum().shift(1)
+        curr = curr.loc[:, ['gameId', 'home_win_cumsum', 'away_win_cumsum']]
+        tables.append(curr)
+    tables = pd.concat(
+        objs=tables,
+        axis=0
+    )
+    return tables
+    
+
+
 def get_batting_games_dates():
     # determine gameId and date combinations we have batting and pitching for
     batting_gameId_dates = pd.concat(
@@ -79,6 +144,22 @@ def get_full_batting_stats(team):
     return df_batting
 
 
+def batter_appearance_freq(data, top_batter_count):
+    """
+    """
+
+    # Rank batterId by most appearances and grab those in count
+    freq = data.groupby(
+        by=['batterId'],
+        as_index=False
+    ).agg({'gameId': pd.Series.nunique})
+    freq.sort_values(by=['gameId'], ascending=False, inplace=True)
+    freq = freq.head(top_batter_count)
+    freq_batters = list(freq['batterId'])
+    data = data.loc[data['batterId'].isin(freq_batters), :]
+    return data
+
+
 def get_full_pitching_stats(team):
     """
     """
@@ -109,6 +190,23 @@ def get_full_pitching_stats(team):
     )
     return df_pitching
 
+
+def pitcher_appearance_freq(data, top_pitcher_count):
+    """
+    """
+
+    # Rank batterId by most appearances and grab those in count
+    freq = data.groupby(
+        by=['pitcherId'],
+        as_index=False
+    ).agg({'gameId': pd.Series.nunique})
+    freq.sort_values(by=['gameId'], ascending=False, inplace=True)
+    freq = freq.head(top_pitcher_count)
+    freq_pitchers = list(freq['pitcherId'])
+    data = data.loc[data['pitcherId'].isin(freq_pitchers), :]
+    return data
+
+    
 
 def get_full_boxscores(team):
     """
@@ -212,31 +310,36 @@ if __name__ == "__main__":
             str(y) for y in np.arange(1967, 2020, 1)
         ]
     ]
+    top_pitcher_count = 15
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
                        'SeasonLosses', 'SeasonWins', 'numberPitches',
                        'Outs', 'RunsAllowed', 'Strikes', 'SO']
+    top_batter_count = 15
     batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
                       'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
                       'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
                       'StrikeOuts', 'Triples']    
-
+    
     # ----------
     # Read in base table from schedule
     for yr in ['2018']:
 
-        # Read in current year matchup schedule
-        df_base = pd.read_csv(
-            matchups_path+'{}_matchups.csv'.format(yr),
-            dtype=str
-        )
-        df_base.loc[:, 'date'] = pd.to_datetime(
-            df_base['date'],
-            infer_datetime_format=True
-        )
+        # Read in current year Summaries (will be cut down later)
+        df_base = pd.concat(
+            objs=[
+                pd.read_parquet(
+                    CONFIG.get('paths').get('normalized') + \
+                    dd + "/" + "game_linescore_summary.parquet"
+                ) for dd in os.listdir(
+                    CONFIG.get('paths').get('normalized')
+                ) if str(yr) in dd and
+                os.path.isfile(CONFIG.get('paths').get('normalized') + \
+                    dd + "/" + "game_linescore_summary.parquet")
+            ],
+            axis=0
+        )                         
 
         #
-        #
-        # ---------------------------------------------
         # ---------------------------------------------
         # PREPARATION TO ENSURE ALL MERGES ARE COMPLETE
 
@@ -244,77 +347,75 @@ if __name__ == "__main__":
         # Inner merge to base from batting
         # to make sure all gameIds are in both
         batting_gameId_dates = get_batting_games_dates()
-        df_base = pd.merge(
-            df_base,
-            batting_gameId_dates,
-            how='inner',
-            left_on=['gameId', 'date'],
-            right_on=['gameId', 'gameDate'],
-            validate='1:1'
-        )
+        batting_dates = list(set(batting_gameId_dates['gameId']))
+        df_base = df_base.loc[df_base['gameId'].isin(batting_dates), :]
         del batting_gameId_dates
         gc.collect()
-        df_base.drop(labels=['gameDate'], axis=1, inplace=True)
 
         # ---------------------------------------------
         # Inner merge to base from pitching
         # to make sure all gameIds are in both
         pitching_gameId_dates = get_pitching_games_dates()
-        df_base = pd.merge(
-            df_base,
-            pitching_gameId_dates,
-            how='inner',
-            left_on=['gameId', 'date'],
-            right_on=['gameId', 'gameDate'],
-            validate='1:1'
-        )
+        pitching_dates = list(set(pitching_gameId_dates['gameId']))
+        df_base = df_base.loc[df_base['gameId'].isin(pitching_dates), :]
         del pitching_gameId_dates
         gc.collect()
-        df_base.drop(labels=['gameDate'], axis=1, inplace=True)
-
         
         # Get list of teams to iterate over
         teams_list = list(set(
-            list(df_base['away_team_code'])+
-            list(df_base['home_team_code'])
+            list(df_base['away_code'])+
+            list(df_base['home_code'])
         ))
 
+        # Merge Key Dictionary by Team
+        team_prev_merge_key_dict = get_merge_key_dict(df_base)
+
+        # Win Loss by Disposition
+        team_win_loss_disp = win_loss_by_disposition(df_base)
+        print(team_win_loss_disp.head(24))
         #
-        #
-        # ---------------------------------------------
         # ---------------------------------------------
         # PREPARATION TO ENSURE ALL MERGES ARE COMPLETE
+
+        # ---------------------------------------------
         # Iterate over teams and apend final table to list
         complete_team_tables = []
+        
         #for team in teams_list:
         for team in teams_list:
             print("Now creating featurespace for team: {}".format(team))
 
-            # --------------------
-            # Get sorted list of gameIds for team
-            team_gameids = df_base.loc[
-                df_base['gameId'].str.contains(team), :]
-            team_gameids.sort_values(
-                by=['date'],
-                ascending=True,
-                inplace=True
-            )
-            team_gameids = list(team_gameids['gameId'])
+            # Subset base for current team
+            df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
+            print(df_base_curr.shape)
 
-            # --------------------
-            # Subset and sort base table for current team
-            df_base_curr = df_base.loc[
-                df_base['gameId'].str.contains(team), :]
-            df_base_curr.sort_values(
-                by=['date'], ascending=True, inplace=True
+            # Create previous game merge key for home team
+            df_base_curr.loc[:, 'zipKey'] = df_base_curr[['gameId', 'home_code']].apply(tuple, axis=1)
+            df_base_curr.loc[:, 'awayPrevGameId'] = \
+                df_base_curr['zipKey'].map(team_prev_merge_key_dict)
+            df_base_curr.drop(labels=['zipKey'], axis=1, inplace=True)
+            
+            # Create previous game merge key for away team
+            df_base_curr.loc[:, 'zipKey'] = df_base_curr[['gameId', 'away_code']].apply(tuple, axis=1)
+            df_base_curr.loc[:, 'homePrevGameId'] = \
+                df_base_curr['zipKey'].map(team_prev_merge_key_dict)
+            df_base_curr.drop(labels=['zipKey'], axis=1, inplace=True)
+
+            #HANDLE THS MERGE
+            df_base_curr = pd.merge(
+                df_base_curr,
+                team_win_loss_disp,
+                how='left',
+                on=['gameId'],
+                validate='1:1'
             )
-            df_base_curr.loc[:, 'prev_gameid_merge_key'] = \
-                df_base_curr['gameId'].apply(
-                    lambda x: (
-                        team_gameids[team_gameids.index(x)-1] if
-                        team_gameids.index(x) > 0 else 'nan'
-                    )
-                )
+            print(df_base_curr.shape)
+            df_base_curr[['gameId', 'awayPrevGameId', 'homePrevGameId',
+                          'away_code', 'home_code', 'away_division',
+                          'home_division', 'away_loss', 'home_loss',
+                          'away_win', 'away_loss']].to_csv(
+                              '/Users/peteraltamura/Desktop/df_base_curr.csv')
+            sdkj
 
             # --------------------
             # Filter to team games for batting, sort and merge
@@ -327,6 +428,7 @@ if __name__ == "__main__":
                     list(set(df_base_curr['gameId']))
                 ),
             :]
+            team_batting = batter_appearance_freq(team_batting, top_batter_count)
             team_batting.sort_values(
                 by=['gameDate'], ascending=True, inplace=True
             )
@@ -354,6 +456,7 @@ if __name__ == "__main__":
                 team_pitching['gameId'].isin(
                     list(set(df_base_curr['gameId']))),
             :]
+            team_pitching = pitcher_appearance_freq(team_pitching, top_pitcher_count)
             team_pitching.sort_values(
                 by=['gameDate'],
                 ascending=True,

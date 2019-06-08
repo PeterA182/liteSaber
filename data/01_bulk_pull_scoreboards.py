@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 import urllib.request
+import multiprocessing as mp
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ETREE
 import datetime as dt
@@ -199,18 +200,38 @@ def scrape_game_scoreboards(date):
 if __name__ == "__main__":
 
     # COnfiguration
-    min_date = dt.datetime(year=2018, month=8, day=1)
-    max_date = dt.datetime(year=2018, month=9, day=1)
+    min_date = dt.datetime(year=2018, month=3, day=1)
+    max_date = dt.datetime(year=2018, month=11, day=1)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
-    base_dest = "/Volumes/Transcend/gameday/"
+    base_dest = CONFIG.get('paths').get('raw')
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
     dates = [min_date+dt.timedelta(days=i)
              for i in range((max_date-min_date).days+1)]
 
+    dates = [
+        d_ for d_ in dates if(
+            "final_summaries.parquet" not in os.listdir(
+                base_dest+ "year_{}month_{}day_{}/".format(
+                    str(d_.year).zfill(4),
+                    str(d_.month).zfill(2),
+                    str(d_.day).zfill(2)
+                )
+            )
+            and str(d_.year) == '2018'
+    ]
+    dsfkjsldf
+    print(len(dates))
+    print(dates[:5])
+    print(dates[-5:])
+
     for dd in dates:
         print("Scraping Linescore Summaries from: {}".format(str(dd)))
-        scrape_game_scoreboards(dd)
+        POOL = mp.Pool(mp.cpu_count())
+        POOL.map(scrape_game_scoreboards, dates)
+        POOL.close()
+        POOL.join()
+#        scrape_game_scoreboards(dd)
