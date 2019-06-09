@@ -8,31 +8,29 @@ import utilities as util
 CONFIG = util.load_config()
 
 
-def get_merge_key_dict(data):
+def get_prev_game_id(data):
     """
     """
 
-    # Set dictionary to add to
-    dic = {}
-    
+    # Team Tables
+    team_tables = []
+
     # Sort gameIds for each team
     for team in list(set(
             list(data['away_code']) +
             list(data['home_code'])
     )):
-        
+        # Combine Home and Away
         team_data = data.loc[data['gameId'].str.contains(team), :]
-        team_data.sort_values(by=['gameId'], ascending=False, inplace=True)
+        team_data.sort_values(by=['gameId'], ascending=True, inplace=True)
         team_data.loc[:, 'prevGameId'] = team_data['gameId'].shift(1)
-        team_data.loc[:, 'team_abbrev'] = team
-        print(team)
-        print(np.mean(team_data['gameId'].isnull()))
-        print(np.mean(team_data['team_abbrev'].isnull()))
-        team_data.loc[:, 'zip'] = team_data[['gameId', 'team_abbrev']].apply(tuple, axis=1)
-        team_data = team_data.set_index('zip')['prevGameId'].to_dict()
-        dic.update(team_data)
-
-    return dic
+        team_data['team_code'] = team
+        team_tables.append(team_data[['gameId', 'team_code', 'prevGameId']])   
+    team_tables = pd.concat(
+        objs=team_tables,
+        axis=0
+    )
+    return team_tables
 
 
 def win_loss_by_disposition(data):
@@ -57,20 +55,69 @@ def win_loss_by_disposition(data):
                                 data['away_team_runs']).astype(int)
     data['away_team_winner'] = (data['away_team_runs'] >
                                 data['home_team_runs']).astype(int)
-    tables = []
+
+    # Iteration
+    home_team_stats_tables = []
+    away_team_stats_tables = []
     for team in teams:
+
+        print(team)
+        print(data.shape)
+        base_left = data.loc[:, ['gameId']]
+
+        # Home
         curr = data.loc[data['gameId'].str.contains(team), :]
-        curr.sort_values(by=['gameDate'], ascending=True, inplace=True)
-        curr['home_win_cumsum'] = curr['home_team_winner'].cumsum().shift(1)
-        curr['away_win_cumsum'] = curr['away_team_winner'].cumsum().shift(1)
-        curr = curr.loc[:, ['gameId', 'home_win_cumsum', 'away_win_cumsum']]
-        tables.append(curr)
-    tables = pd.concat(
-        objs=tables,
+        curr = curr.loc[curr['home_code'] == team, :]
+        curr['disposition'] = 'home'
+        curr.sort_values(by=['gameId'], ascending=True, inplace=True)
+        curr.loc[:, 'home_team_winners'] = curr['home_team_winner'].cumsum()
+        curr.reset_index(drop=True, inplace=True)
+        curr.loc[:, 'home_team_win_pct_at_home'] = (
+            curr['home_team_winners'] / (
+                curr.index + 1
+            )
+        )
+        if curr.shape[0]== 0:
+            continue
+        
+        curr = curr.loc[:, ['gameId', 'disposition', 'home_team_win_pct_at_home']]
+        curr.loc[:, 'away_team_win_pct_at_away'] = np.NaN
+        home_team_stats_tables.append(curr)
+
+        # Away
+        curr = data.loc[data['gameId'].str.contains(team), :]
+        curr = curr.loc[curr['away_code'] == team, :]
+        curr['disposition'] = 'away'
+        curr.sort_values(by=['gameId'], ascending=True, inplace=True)
+        curr.loc[:, 'away_team_winners'] = curr['away_team_winner'].cumsum()
+        curr.reset_index(drop=True, inplace=True)
+        curr.loc[:, 'away_team_win_pct_at_away'] = (
+            curr['away_team_winners'] / (
+                curr.index + 1
+            )
+        )
+        curr = curr.loc[:, ['gameId', 'disposition', 'away_team_win_pct_at_away']]
+        if curr.shape[0] == 0:
+            continue
+        curr.loc[:, 'home_team_win_pct_at_home'] = np.NaN
+        away_team_stats_tables.append(curr)
+
+    # Combine
+    home_team_stats_tables = pd.concat(
+        objs=home_team_stats_tables,
         axis=0
     )
-    return tables
-    
+    away_team_stats_tables = pd.concat(
+        objs=away_team_stats_tables,
+        axis=0
+    )
+    home_team_stats_tables = home_team_stats_tables.loc[:, [
+        'gameId', 'disposition', 'home_team_win_pct_at_home'
+    ]]
+    away_team_stats_tables = away_team_stats_tables.loc[:, [
+        'gameId', 'disposition', 'away_team_win_pct_at_away'
+    ]]
+    return home_team_stats_tables, away_team_stats_tables
 
 
 def get_batting_games_dates():
@@ -126,16 +173,12 @@ def get_full_batting_stats(team):
     fnames = [f for f in fnames if team in f]
     for fname in fnames:
         df = pd.read_parquet(fname)
-        df = df.loc[df['gameId'].str.contains(team), :]
+        #df = df.loc[df['gameId'].str.contains(team), :]
         if pd.Series.nunique(df['gameId']) != 1:
-            return pd.DataFrame()
+            continue
         gameId = df['gameId'].iloc[0]
-        if team in gameId.split("_")[4]:
-            df = df.loc[df['batterTeamFlag'] == 'away', :]
-        elif team in gameId.split("_")[5]:
-            df = df.loc[df['batterTeamFlag'] == 'home', :]
-        else:
-            raise
+        df.loc[df['gameId'].apply(lambda x: x.split("_")[4]) == team, 'batterTeamFlag'] = 'away'
+        df.loc[df['gameId'].apply(lambda x: x.split("_")[5]) == team, 'batterTeamFlag'] = 'home'
         df_batting.append(df)
     df_batting = pd.concat(
         objs=df_batting,
@@ -271,6 +314,7 @@ def pivot_stats_wide(data, swing_col, metric_cols):
                 ]
             )
         ]
+        idx_cols = ['gameId', 'batterTeamFlag']
     elif swing_col == 'pitcherId':
         metric_cols = [
             x for x in data.columns if any(
@@ -280,14 +324,14 @@ def pivot_stats_wide(data, swing_col, metric_cols):
                 ]
             )
         ]
+        idx_cols = ['gameId', 'pitcherTeamFlag']
     else:
         raise
 
     # Pivot Table
-    print(sorted(data.columns))
     player_ids = list(set(data[swing_col]))
     data = data.pivot_table(
-        index=['gameId'],
+        index=idx_cols,
         columns=[swing_col],
         values=metric_cols
     )
@@ -368,11 +412,12 @@ if __name__ == "__main__":
         ))
 
         # Merge Key Dictionary by Team
-        team_prev_merge_key_dict = get_merge_key_dict(df_base)
+        #team_prev_merge_key_dict = get_merge_key_dict(df_base)
+        prev_game_ids = get_prev_game_id(df_base)
 
         # Win Loss by Disposition
-        team_win_loss_disp = win_loss_by_disposition(df_base)
-        print(team_win_loss_disp.head(24))
+        home_team_win_pct_home, away_team_win_pct_away = win_loss_by_disposition(df_base)
+        
         #
         # ---------------------------------------------
         # PREPARATION TO ENSURE ALL MERGES ARE COMPLETE
@@ -384,42 +429,69 @@ if __name__ == "__main__":
         #for team in teams_list:
         for team in teams_list:
             print("Now creating featurespace for team: {}".format(team))
+            if team in ['aas', 'nas', 'umi']:
+                continue
 
             # Subset base for current team
             df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
-            print(df_base_curr.shape)
 
-            # Create previous game merge key for home team
-            df_base_curr.loc[:, 'zipKey'] = df_base_curr[['gameId', 'home_code']].apply(tuple, axis=1)
-            df_base_curr.loc[:, 'awayPrevGameId'] = \
-                df_base_curr['zipKey'].map(team_prev_merge_key_dict)
-            df_base_curr.drop(labels=['zipKey'], axis=1, inplace=True)
-            
-            # Create previous game merge key for away team
-            df_base_curr.loc[:, 'zipKey'] = df_base_curr[['gameId', 'away_code']].apply(tuple, axis=1)
-            df_base_curr.loc[:, 'homePrevGameId'] = \
-                df_base_curr['zipKey'].map(team_prev_merge_key_dict)
-            df_base_curr.drop(labels=['zipKey'], axis=1, inplace=True)
+            # Add previous gameIds to home
+            df_base_curr = pd.merge(
+                df_base_curr,
+                prev_game_ids,
+                how='left',
+                left_on=['gameId', 'home_code'],
+                right_on=['gameId', 'team_code'],
+                validate='1:1'
+            )
+            df_base_curr.rename(
+                columns={'prevGameId': 'homePrevGameId'},
+                inplace=True
+            )
+
+            # Add prev gameIds to away
+            df_base_curr = pd.merge(
+                df_base_curr,
+                prev_game_ids,
+                how='left',
+                left_on=['gameId', 'away_code'],
+                right_on=['gameId', 'team_code'],
+                validate='1:1'
+            )
+            df_base_curr.rename(
+                columns={'prevGameId': 'awayPrevGameId'},
+                inplace=True
+            )
 
             #HANDLE THS MERGE
             df_base_curr = pd.merge(
                 df_base_curr,
-                team_win_loss_disp,
+                home_team_win_pct_home,
                 how='left',
-                on=['gameId'],
+                left_on=['homePrevGameId'],
+                right_on=['gameId'],
                 validate='1:1'
             )
-            print(df_base_curr.shape)
-            df_base_curr[['gameId', 'awayPrevGameId', 'homePrevGameId',
-                          'away_code', 'home_code', 'away_division',
-                          'home_division', 'away_loss', 'home_loss',
-                          'away_win', 'away_loss']].to_csv(
-                              '/Users/peteraltamura/Desktop/df_base_curr.csv')
-            sdkj
-
+            df_base_curr.to_csv('/Users/peteraltamura/error_dupes.csv')
+            df_base_curr = pd.merge(
+                df_base_curr,
+                away_team_win_pct_away,
+                how='left',
+                left_on=['awayPrevGameId'],
+                right_on=['gameId'],
+                validate='1:1'
+            )
+            df_base_curr[[
+                'gameId', 'awayPrevGameId', 'homePrevGameId',
+                'away_code', 'home_code',
+                'home_team_win_pct_at_home', 'away_team_win_pct_at_away'
+            ]].to_csv('/Users/peteraltamura/Desktop/df_base_curr.csv')
+            
             # --------------------
             # Filter to team games for batting, sort and merge
             team_batting = get_full_batting_stats(team)
+
+            # Filter or go to next
             if team_batting.shape[0] == 0:
                 print("{} batting was empty".format(team))
                 continue
@@ -428,25 +500,49 @@ if __name__ == "__main__":
                     list(set(df_base_curr['gameId']))
                 ),
             :]
+
+            # Get batter frequency
             team_batting = batter_appearance_freq(team_batting, top_batter_count)
-            team_batting.sort_values(
-                by=['gameDate'], ascending=True, inplace=True
-            )
-            team_batting.drop(labels=['gameDate'],
-                              axis=1, inplace=True)
+            team_batting.to_csv('/Users/peteraltamura/Desktop/team_batting.csv', index=False)
             team_batting = pivot_stats_wide(team_batting,
                                             swing_col='batterId',
                                             metric_cols=batter_metrics)
-            team_batting.rename(columns={'gameId': 'gameId_merge'}, inplace=True)
-            df_base_curr = pd.merge(
-                df_base_curr, team_batting,
+
+            # Split batting stats to home team
+            df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
+            team_batting_home = team_batting.loc[team_batting['batterTeamFlag'] == 'home', :]
+            team_batting_home.rename(columns={'gameId': 'homeGameId'}, inplace=True)
+            df_base_curr_home = pd.merge(
+                df_base_curr_home,
+                team_batting_home,
                 how='left',
-                left_on=['prev_gameid_merge_key'],
-                right_on=['gameId_merge'],
+                left_on=['homePrevGameId'],
+                right_on=['homeGameId'],
                 validate='1:1'
             )
-            df_base_curr.drop(labels=['gameId_merge'], axis=1, inplace=True)
-            
+            df_base_curr_home.drop(labels=['homeGameId'], axis=1, inplace=True)
+
+            # Split batting stats to away team
+            df_base_curr_away = df_base_curr.loc[df_base_curr['away_code'] == team, :]
+            team_batting_away = team_batting.loc[team_batting['batterTeamFlag'] == 'away', :]
+            team_batting_away.rename(columns={'gameId': 'awayGameId'}, inplace=True)
+            df_base_curr_away = pd.merge(
+                df_base_curr_away,
+                team_batting_away,
+                how='left',
+                left_on=['awayPrevGameId'],
+                right_on=['awayGameId'],
+                validate='1:1'
+            )
+            df_base_curr_away.drop(labels=['awayGameId'], axis=1, inplace=True)
+
+            # Concatenate home and away
+            df_base_curr = pd.concat(
+                objs=[df_base_curr_home, df_base_curr_away],
+                axis=0
+            )
+            df_base_curr.to_csv('/Users/peteraltamura/Desktop/batting_merged.csv', index=False)
+
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
             if team_pitching.shape[0] == 0:
@@ -470,17 +566,50 @@ if __name__ == "__main__":
             team_pitching = pivot_stats_wide(team_pitching,
                                              swing_col='pitcherId',
                                              metric_cols=pitcher_metrics)
-            team_pitching.rename(columns={'gameId': 'gameId_merge'},
-                                 inplace=True)
-            df_base_curr = pd.merge(
-                df_base_curr, team_pitching,
+
+            # Split pitching stats to home team
+            df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
+            team_pitching_home = team_pitching.loc[team_pitching['pitcherTeamFlag'] == 'home', :]
+            team_pitching_home.rename(columns={'gameId': 'homeGameId'}, inplace=True)
+            df_base_curr_home = pd.merge(
+                df_base_curr_home,
+                team_pitching_home,
                 how='left',
-                left_on=['prev_gameid_merge_key'],
-                right_on=['gameId_merge'],
+                left_on=['homePrevGameId'],
+                right_on=['homeGameId'],
                 validate='1:1'
             )
-            df_base_curr.drop(labels=['gameId_merge'], axis=1, inplace=True)
+            df_base_curr_home.drop(labels=['homeGameId'], axis=1, inplace=True)
 
+            # Split pitching stats to away team
+            df_base_curr_away = df_base_curr.loc[df_base_curr['away_code'] == team, :]
+            team_pitching_away = team_pitching.loc[team_pitching['pitcherTeamFlag'] == 'away', :]
+            team_pitching_away.rename(columns={'gameId': 'awayGameId'}, inplace=True)
+            df_base_curr_away = pd.merge(
+                df_base_curr_away,
+                team_pitching_away,
+                how='left',
+                left_on=['awayPrevGameId'],
+                right_on=['awayGameId'],
+                validate='1:1'
+            )
+            df_base_curr_away.drop(labels=['awayGameId'], axis=1, inplace=True)
+
+            # Concatenate home and away
+            df_base_curr = pd.concat(
+                objs=[df_base_curr_home, df_base_curr_away],
+                axis=0
+            )
+            cols = ['gameId',
+                    'awayPrevGameId',
+                    'homePrevGameId',
+                    'away_code',
+                    'home_code',
+                    'home_team_win_pct_at_home',
+                    'away_team_win_pct_at_away']
+            cols += [x for x in df_base_curr.columns if 'trail' in x]
+            df_base_curr[cols].to_csv('/Users/peteraltamura/Desktop/df_base_curr_all.csv', index=False)
+            sdfkjsdlf
             # Add scores from boxscores
             boxscores = get_full_boxscores(team)
             boxscores = boxscores.loc[
@@ -498,7 +627,7 @@ if __name__ == "__main__":
             df_base_curr = pd.merge(
                 df_base_curr, boxscores,
                 how='left',
-                left_on=['prev_gameid_merge_key'],
+                left_on=[''],
                 right_on=['gameId_merge'],
                 validate='1:1'
             )
