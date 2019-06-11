@@ -80,7 +80,9 @@ def win_loss_by_disposition(data):
         if curr.shape[0]== 0:
             continue
         
-        curr = curr.loc[:, ['gameId', 'disposition', 'home_team_win_pct_at_home']]
+        curr = curr.loc[:, [
+            'gameId', 'disposition', 'home_team_win_pct_at_home'
+        ]]
         curr.loc[:, 'away_team_win_pct_at_away'] = np.NaN
         home_team_stats_tables.append(curr)
 
@@ -284,9 +286,9 @@ def get_full_linescore_summaries(team):
     """
     df_linescore_summaries = []
     fnames = [
-        CONFIG.get('paths').get('raw')+dstr+"/game_linescore_summary.parquet"
-        for dstr in os.listdir(CONFIG.get('paths').get('raw')) if
-        os.path.isfile(CONFIG.get('paths').get('raw')+dstr+
+        CONFIG.get('paths').get('normalized')+dstr+"/game_linescore_summary.parquet"
+        for dstr in os.listdir(CONFIG.get('paths').get('normalized')) if
+        os.path.isfile(CONFIG.get('paths').get('normalized')+dstr+
                        "/game_linescore_summary.parquet")
     ]
     for fname in fnames:
@@ -340,7 +342,7 @@ def pivot_stats_wide(data, swing_col, metric_cols):
         x[0] if x[1] == '' else x[0]+"_"+str(player_ids.index(x[1]))
         for x in data.columns
     ]
-    print(data.columns)
+    
     return data
 
 
@@ -366,7 +368,7 @@ if __name__ == "__main__":
     
     # ----------
     # Read in base table from schedule
-    for yr in ['2018']:
+    for yr in ['2017', '2018']:
 
         # Read in current year Summaries (will be cut down later)
         df_base = pd.concat(
@@ -428,12 +430,15 @@ if __name__ == "__main__":
         
         #for team in teams_list:
         for team in teams_list:
-            print("Now creating featurespace for team: {}".format(team))
-            if team in ['aas', 'nas', 'umi']:
+        #for team in ['col']:
+            if team in ['aas', 'nas', 'umi', 'atf']:
                 continue
+
+            print("Now creating featurespace for team: {}".format(team))
 
             # Subset base for current team
             df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
+            print(sum(df_base_curr.gameId.isnull()))
 
             # Add previous gameIds to home
             df_base_curr = pd.merge(
@@ -448,7 +453,10 @@ if __name__ == "__main__":
                 columns={'prevGameId': 'homePrevGameId'},
                 inplace=True
             )
-
+            print(sum(df_base_curr.gameId.isnull()))
+            if 'gameId_x' in df_base_curr.columns:
+                sdfjsdk
+            
             # Add prev gameIds to away
             df_base_curr = pd.merge(
                 df_base_curr,
@@ -458,11 +466,12 @@ if __name__ == "__main__":
                 right_on=['gameId', 'team_code'],
                 validate='1:1'
             )
+            print(sum(df_base_curr.gameId.isnull()))
             df_base_curr.rename(
                 columns={'prevGameId': 'awayPrevGameId'},
                 inplace=True
             )
-
+            df_base_curr.drop_duplicates(subset=['homePrevGameId'], inplace=True)
             #HANDLE THS MERGE
             df_base_curr = pd.merge(
                 df_base_curr,
@@ -470,23 +479,55 @@ if __name__ == "__main__":
                 how='left',
                 left_on=['homePrevGameId'],
                 right_on=['gameId'],
-                validate='1:1'
+                validate='1:1',
+                suffixes=['', '_del']
             )
-            df_base_curr.to_csv('/Users/peteraltamura/error_dupes.csv')
+            df_base_curr.drop(
+                labels=[x for x in df_base_curr.columns if x[-4:] == '_del'],
+                axis=1,
+                inplace=True
+            )
+            print(sum(df_base_curr.gameId.isnull()))
+            df_base_curr.drop_duplicates(subset=['awayPrevGameId'], inplace=True)
             df_base_curr = pd.merge(
                 df_base_curr,
                 away_team_win_pct_away,
                 how='left',
                 left_on=['awayPrevGameId'],
                 right_on=['gameId'],
-                validate='1:1'
+                validate='1:1',
+                suffixes=['', '_del']
+            )
+            df_base_curr.drop(
+                labels=[x for x in df_base_curr.columns if x[-4:] == '_del'],
+                axis=1,
+                inplace=True
             )
             df_base_curr[[
                 'gameId', 'awayPrevGameId', 'homePrevGameId',
                 'away_code', 'home_code',
                 'home_team_win_pct_at_home', 'away_team_win_pct_at_away'
             ]].to_csv('/Users/peteraltamura/Desktop/df_base_curr.csv')
-            
+
+            # --------------------
+            # Add Full Linescore to summary
+            df_linescore_summary = get_full_linescore_summaries(team)
+            df_linescore_summary = df_linescore_summary.loc[:, [
+                'gameId', 'away_team_runs', 'home_team_runs'
+            ]]
+            df_linescore_summary.loc[:, 'home_team_win'] = (
+                df_linescore_summary['home_team_runs'] >
+                df_linescore_summary['away_team_runs']
+            ).astype(int)
+            df_base_curr = pd.merge(
+                df_base_curr,
+                df_linescore_summary,
+                how='left',
+                left_on=['gameId'],
+                right_on=['gameId'],
+                validate='1:1'
+            )
+
             # --------------------
             # Filter to team games for batting, sort and merge
             team_batting = get_full_batting_stats(team)
@@ -521,7 +562,7 @@ if __name__ == "__main__":
                 validate='1:1'
             )
             df_base_curr_home.drop(labels=['homeGameId'], axis=1, inplace=True)
-
+            
             # Split batting stats to away team
             df_base_curr_away = df_base_curr.loc[df_base_curr['away_code'] == team, :]
             team_batting_away = team_batting.loc[team_batting['batterTeamFlag'] == 'away', :]
@@ -541,8 +582,6 @@ if __name__ == "__main__":
                 objs=[df_base_curr_home, df_base_curr_away],
                 axis=0
             )
-            df_base_curr.to_csv('/Users/peteraltamura/Desktop/batting_merged.csv', index=False)
-
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
             if team_pitching.shape[0] == 0:
@@ -600,40 +639,6 @@ if __name__ == "__main__":
                 objs=[df_base_curr_home, df_base_curr_away],
                 axis=0
             )
-            cols = ['gameId',
-                    'awayPrevGameId',
-                    'homePrevGameId',
-                    'away_code',
-                    'home_code',
-                    'home_team_win_pct_at_home',
-                    'away_team_win_pct_at_away']
-            cols += [x for x in df_base_curr.columns if 'trail' in x]
-            df_base_curr[cols].to_csv('/Users/peteraltamura/Desktop/df_base_curr_all.csv', index=False)
-            sdfkjsdlf
-            # Add scores from boxscores
-            boxscores = get_full_boxscores(team)
-            boxscores = boxscores.loc[
-                boxscores['gameId'].isin(
-                    list(set(df_base_curr['gameId']))
-                ),
-            :]
-            print(boxscores.columns)
-            boxscores.sort_values(
-                by=['date'], ascending=True, inplace=True
-            )
-            boxscores.drop(labels=['date'], axis=1, inplace=True)
-            boxscores.rename(columns={'gameId': 'gameId_merge'},
-                             inplace=True)
-            df_base_curr = pd.merge(
-                df_base_curr, boxscores,
-                how='left',
-                left_on=[''],
-                right_on=['gameId_merge'],
-                validate='1:1'
-            )
-            df_base_curr.drop(labels=['gameId_merge'], axis=1,
-                              inplace=True)
-            # Add
 
             # Create flag
             try:
@@ -642,11 +647,32 @@ if __name__ == "__main__":
                                   inplace=True)
             except:
                 pass
-            df_base_curr.to_parquet(
+
+            final_columns = ['gameId']
+            final_columns = [
+                x for x in df_base_curr.columns if any(
+                    y in x for y in batter_metrics
+                )
+            ]
+            final_columns = [
+                x for x in df_base_curr.columns if any(
+                    y in x for y in pitcher_metrics
+                )
+            ]
+            final_columns.extend([
+                'home_team_win_pct_at_home', 'away_team_win_pct_at_away'
+            ])
+            final_columns.extend(['home_team_winner'])
+            df_base_curr[final_columns].to_parquet(
                 CONFIG.get('paths').get('initial_featurespaces') + \
                 '{}_{}_initial_featurespace.parquet'.format(
                     str(yr), str(team)
                 )
             )
+            if team == 'col':
+                df_base_curr[final_columns].to_csv(
+                    '/Users/peteraltamura/Desktop/finished_nya.csv',
+                    index=False
+                )
 
     
