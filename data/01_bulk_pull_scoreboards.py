@@ -111,7 +111,10 @@ def scrape_game_scoreboards(date):
         # Inning Line Scores, Home Runs, Pitchers
         game_id = str(gid.get('href'))[7:]
         rbs = full_url + "/" + str(gid.get('href'))[7:] + "linescore.json"
-        resp = urllib.request.urlopen(rbs)
+        try:
+            resp = urllib.request.urlopen(rbs)
+        except:
+            continue
         resp = pd.read_json(resp)
 
         # Line Scores
@@ -148,13 +151,29 @@ def scrape_game_scoreboards(date):
         
             
         
+    print(len(inning_lines))
+    print(len(home_runs))
+    print(len(pitcher_summaries))
+    print(len(final_summaries))
     try:
         inning_lines = pd.concat(inning_lines, axis=0)
+    except:
+        inning_lines = pd.DataFrame()
+    try:
         home_runs = pd.concat(home_runs, axis=0)
+    except:
+        home_runs = pd.DataFrame()
+    try:
         pitcher_summaries = pd.concat(pitcher_summaries, axis=0)
+    except:
+        pitcher_summaries = pd.DataFrame()
+    try:
         final_summaries = pd.concat(final_summaries, axis=0)
-        
-        # Innign Lines
+    except:
+        final_summaries = pd.DataFrame()
+
+    # Innign Lines
+    try:
         inning_lines.to_csv(
             base_dest + "{}/inning_lines.csv".format(date_url.replace("/", "")),
             index=False
@@ -163,8 +182,11 @@ def scrape_game_scoreboards(date):
             base_dest +
             '{}/inning_lines.parquet'.format(date_url.replace("/", ""))
         )
-
-        # Home Runs
+    except:
+        pass
+    
+    try:
+    # Home Runs
         home_runs.to_csv(
             base_dest + "{}/home_runs.csv".format(date_url.replace("/", "")),
             index=False
@@ -173,7 +195,10 @@ def scrape_game_scoreboards(date):
             base_dest +
             '{}/home_runs.parquet'.format(date_url.replace("/", ""))
         )
+    except:
+        pass
 
+    try:
         # Pitcher Summaries
         pitcher_summaries.to_csv(
             base_dest + "{}/pitcher_summaries.csv".format(date_url.replace("/", "")),
@@ -183,7 +208,10 @@ def scrape_game_scoreboards(date):
             base_dest +
             '{}/pitcher_summaries.parquet'.format(date_url.replace("/", ""))
         )
+    except:
+        pass
 
+    try:
         # Final Summaries
         final_summaries.to_csv(
             base_dest + "{}/game_linescore_summary.csv".format(date_url.replace("/", "")),
@@ -194,14 +222,16 @@ def scrape_game_scoreboards(date):
             '{}/final_summaries.parquet'.format(date_url.replace("/", ""))
         )
     except:
-        print("      no games on day")
+        pass
+    #except:
+    #    print("      no games on day")
     
 
 if __name__ == "__main__":
 
     # COnfiguration
-    min_date = dt.datetime(year=2018, month=3, day=1)
-    max_date = dt.datetime(year=2018, month=11, day=1)
+    min_date = dt.datetime(year=2017, month=3, day=29)
+    max_date = dt.datetime(year=2017, month=11, day=1)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
@@ -213,7 +243,16 @@ if __name__ == "__main__":
              for i in range((max_date-min_date).days+1)]
 
     dates = [
-        d_ for d_ in dates if(
+        d_ for d_ in dates if os.path.exists(
+            base_dest+ "year_{}month_{}day_{}/".format(
+                str(d_.year).zfill(4),
+                str(d_.month).zfill(2),
+                str(d_.day).zfill(2)
+            )
+        )
+    ]
+    dates = [
+        d_ for d_ in dates if (
             "final_summaries.parquet" not in os.listdir(
                 base_dest+ "year_{}month_{}day_{}/".format(
                     str(d_.year).zfill(4),
@@ -221,17 +260,16 @@ if __name__ == "__main__":
                     str(d_.day).zfill(2)
                 )
             )
-            and str(d_.year) == '2018'
+        )
     ]
-    dsfkjsldf
     print(len(dates))
     print(dates[:5])
     print(dates[-5:])
 
     for dd in dates:
         print("Scraping Linescore Summaries from: {}".format(str(dd)))
-        POOL = mp.Pool(mp.cpu_count())
-        POOL.map(scrape_game_scoreboards, dates)
-        POOL.close()
-        POOL.join()
-#        scrape_game_scoreboards(dd)
+        #POOL = mp.Pool(mp.cpu_count())
+        #POOL.map(scrape_game_scoreboards, dates)
+        #POOL.close()
+        #POOL.join()
+        scrape_game_scoreboards(dd)
