@@ -5,6 +5,10 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 import utilities as util
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 CONFIG = util.load_config()
 
 
@@ -98,7 +102,7 @@ def match_games(data):
     return matched
 
 
-def filter_dimensions(date):
+def rename_drop_dimensions(date):
     """
     """
 
@@ -116,8 +120,39 @@ def filter_dimensions(date):
         inplace=True
     )
     return df_matchups
+
+
+def scale_features(train_games, test_games):
+    """
+    """
     
-    
+    #Instantiate
+    scaler = StandardScaler()
+
+    # Fit on training set only.
+    scaler.fit(train_games)
+
+    # Apply transform to both the training set and the test set.
+    train_games = scaler.transform(train_games)
+    test_games = scaler.transform(test_games)
+    return train_games, test_games
+
+
+def apply_pca(train_games, test_games):
+    """
+    """
+
+    # Instantiate pca object
+    pca = PCA(.95)
+
+    # Fit on train
+    pca.fit(train_img)
+
+    # Transform train and test
+    train_games = pca.transform(train_games)
+    test_games = pca.transform(test_games)
+
+    return train_games, test_games
 
 
 if __name__ == "__main__":
@@ -125,6 +160,7 @@ if __name__ == "__main__":
     # Full dataset path
     years = ['2017']
     min_fill_thresh = 0.96
+    test_size = 0.3
     
     top_pitcher_count = 15
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
@@ -144,9 +180,8 @@ if __name__ == "__main__":
         ) if any(y in fname for y in years)
     ]
 
+    # Get all year data table together
     df_all_year = read_in_and_filter(filelist_year)
-    
-        
 
     # Index and Metrics
     idx_cols = [
@@ -159,10 +194,16 @@ if __name__ == "__main__":
     df_matchups = match_games(df_all_year)
     
     # Filter Columns
-    df_matchups = filter_dimensions(df_matchups)
+    df_matchups = rename_drop_dimensions(df_matchups)
 
-    # Transformations
-    df_matchups = dimension_fill_filter(
-    
+    # Train Test Split
+    train_games, test_games, train_result, test_result = \
+        train_test_split(df_matchups, df_targets, test_size=test_size, random_state=0)
+
+    # Scale before PCA
+    train_games, test_games = scale_features(train_games, test_games)
+
+    # Run PCA
+    train_games, test_games = apply_pca(train_games, test_games)
     
     
