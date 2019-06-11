@@ -175,7 +175,6 @@ def get_full_batting_stats(team):
     fnames = [f for f in fnames if team in f]
     for fname in fnames:
         df = pd.read_parquet(fname)
-        #df = df.loc[df['gameId'].str.contains(team), :]
         if pd.Series.nunique(df['gameId']) != 1:
             continue
         gameId = df['gameId'].iloc[0]
@@ -648,7 +647,7 @@ if __name__ == "__main__":
             except:
                 pass
 
-            final_columns = ['gameId']
+            final_columns = ['gameId', 'batterTeamFlag', 'pitcherTeamFlag']
             final_columns = [
                 x for x in df_base_curr.columns if any(
                     y in x for y in batter_metrics
