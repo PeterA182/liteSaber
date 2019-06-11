@@ -430,7 +430,7 @@ if __name__ == "__main__":
         #for team in teams_list:
         for team in teams_list:
         #for team in ['col']:
-            if team in ['aas', 'nas', 'umi', 'atf']:
+            if team in ['aas', 'nas', 'umi', 'atf', 'lvg']:
                 continue
 
             print("Now creating featurespace for team: {}".format(team))
