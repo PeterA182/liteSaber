@@ -12,12 +12,13 @@ from sklearn.decomposition import PCA
 CONFIG = util.load_config()
 
 
-def read_in_and_filter(paths):
+def read_in_and_filter(paths, idx_cols, target):
     """
     """
 
     # List to concatenate later
     df_all_year = []
+    last_col_set = None
 
     # Begin Iteration
     for path_ in paths:
@@ -28,8 +29,8 @@ def read_in_and_filter(paths):
         # Determine metric cols
         metric_cols = [
             x for x in df.columns if
-            any(p in y for p in pitcher_metrics) or
-            any(b in y for b in batter_metrics)
+            any(p in x for p in pitcher_metrics) or
+            any(b in x for b in batter_metrics)
         ]
 
         # Determine metric cols meeting fill thresh
@@ -48,6 +49,16 @@ def read_in_and_filter(paths):
 
         # Stack
         df_all_year.append(df)
+
+        if last_col_set == None:
+            last_col_set = sorted(list(df.columns))
+        else:
+            if set(last_col_set) != set(df.columns):
+                print(path_)
+                print(sorted(df.columns))
+                print(len([x for x in last_col_set if x not in df.columns]))
+                print(len([x for x in df.columns if x not in last_col_set]))
+                raise
 
     # Concatenate
     df_all_year = pd.concat(
@@ -172,23 +183,25 @@ if __name__ == "__main__":
                       'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
                       'StrikeOuts', 'Triples']    
 
-    # File list
-    filelist_year = [
-        CONFIG.get('paths').get('initial_featurespace')+fname
-        for fname in os.listdir(
-            CONFIG.get('paths').get('initial_featurespace')
-        ) if any(y in fname for y in years)
-    ]
-
-    # Get all year data table together
-    df_all_year = read_in_and_filter(filelist_year)
-
     # Index and Metrics
     idx_cols = [
         'home_team_win_pct_at_home', 'away_team_win_pct_at_away',
         'home_team_winner'
     ]
     target = 'home_team_winner'
+    
+    # File list
+    filelist_year = [
+        CONFIG.get('paths').get('initial_featurespaces')+fname
+        for fname in os.listdir(
+            CONFIG.get('paths').get('initial_featurespaces')
+        ) if any(y in fname for y in years)
+    ]
+
+    # Get all year data table together
+    df_all_year = read_in_and_filter(filelist_year,
+                                     idx_cols=idx_cols,
+                                     target=target)
 
     # Match Games
     df_matchups = match_games(df_all_year)
