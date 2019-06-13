@@ -315,7 +315,17 @@ def pivot_stats_wide(data, swing_col, metric_cols):
                 ]
             )
         ]
+        
         idx_cols = ['gameId', 'batterTeamFlag']
+        freq = data['batterId'].value_counts()
+        freq = pd.DataFrame(freq).reset_index(inplace=False)
+        freq.columns = ['batterId', 'freq']
+        freq.sort_values(by=['freq'], ascending=False, inplace=True)
+        freq['rank'] = range(freq.shape[0])
+        freq = freq.loc[:, ['batterId', 'rank']]
+        data = pd.merge(data, freq, how='left', on=['batterId'], validate='m:1')
+        data.sort_values(by=['rank'], ascending=False, inplace=True)
+        
     elif swing_col == 'pitcherId':
         metric_cols = [
             x for x in data.columns if any(
@@ -326,6 +336,15 @@ def pivot_stats_wide(data, swing_col, metric_cols):
             )
         ]
         idx_cols = ['gameId', 'pitcherTeamFlag']
+        freq = data['pitcherId'].value_counts()
+        freq = pd.DataFrame(freq).reset_index(inplace=False)
+        freq.columns = ['pitcherId', 'freq']
+        freq.sort_values(by=['freq'], ascending=False, inplace=True)
+        freq['rank'] = range(freq.shape[0])
+        freq = freq.loc[:, ['pitcherId', 'rank']]
+        data = pd.merge(data, freq, how='left', on=['pitcherId'], validate='m:1')
+        data.sort_values(by=['rank'], ascending=False, inplace=True)
+        
     else:
         raise
 
@@ -333,12 +352,12 @@ def pivot_stats_wide(data, swing_col, metric_cols):
     player_ids = list(set(data[swing_col]))
     data = data.pivot_table(
         index=idx_cols,
-        columns=[swing_col],
+        columns=['rank'],
         values=metric_cols
     )
     data.reset_index(inplace=True)
     data.columns = [
-        x[0] if x[1] == '' else x[0]+"_"+str(player_ids.index(x[1]))
+        x[0] if x[1] == '' else str(x[0])+"_"+str(x[1])
         for x in data.columns
     ]
     
@@ -355,11 +374,11 @@ if __name__ == "__main__":
             str(y) for y in np.arange(1967, 2020, 1)
         ]
     ]
-    top_pitcher_count = 15
+    top_pitcher_count = 8
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
                        'SeasonLosses', 'SeasonWins', 'numberPitches',
                        'Outs', 'RunsAllowed', 'Strikes', 'SO']
-    top_batter_count = 15
+    top_batter_count = 12
     batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
                       'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
                       'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
@@ -367,7 +386,7 @@ if __name__ == "__main__":
     
     # ----------
     # Read in base table from schedule
-    for yr in ['2017', '2018']:
+    for yr in ['2017']:
 
         # Read in current year Summaries (will be cut down later)
         df_base = pd.concat(
@@ -427,9 +446,7 @@ if __name__ == "__main__":
         # Iterate over teams and apend final table to list
         complete_team_tables = []
         
-        #for team in teams_list:
         for team in teams_list:
-        #for team in ['col']:
             if team in ['aas', 'nas', 'umi', 'atf', 'lvg']:
                 continue
 
@@ -452,9 +469,6 @@ if __name__ == "__main__":
                 columns={'prevGameId': 'homePrevGameId'},
                 inplace=True
             )
-            print(sum(df_base_curr.gameId.isnull()))
-            if 'gameId_x' in df_base_curr.columns:
-                sdfjsdk
             
             # Add prev gameIds to away
             df_base_curr = pd.merge(
@@ -465,13 +479,13 @@ if __name__ == "__main__":
                 right_on=['gameId', 'team_code'],
                 validate='1:1'
             )
-            print(sum(df_base_curr.gameId.isnull()))
             df_base_curr.rename(
                 columns={'prevGameId': 'awayPrevGameId'},
                 inplace=True
             )
+
+            # Merge home team win pct at home table
             df_base_curr.drop_duplicates(subset=['homePrevGameId'], inplace=True)
-            #HANDLE THS MERGE
             df_base_curr = pd.merge(
                 df_base_curr,
                 home_team_win_pct_home,
@@ -486,7 +500,8 @@ if __name__ == "__main__":
                 axis=1,
                 inplace=True
             )
-            print(sum(df_base_curr.gameId.isnull()))
+
+            # Merge away team win pct at home table
             df_base_curr.drop_duplicates(subset=['awayPrevGameId'], inplace=True)
             df_base_curr = pd.merge(
                 df_base_curr,
@@ -502,11 +517,6 @@ if __name__ == "__main__":
                 axis=1,
                 inplace=True
             )
-            df_base_curr[[
-                'gameId', 'awayPrevGameId', 'homePrevGameId',
-                'away_code', 'home_code',
-                'home_team_win_pct_at_home', 'away_team_win_pct_at_away'
-            ]].to_csv('/Users/peteraltamura/Desktop/df_base_curr.csv')
 
             # --------------------
             # Add Full Linescore to summary
@@ -648,20 +658,22 @@ if __name__ == "__main__":
                 pass
 
             final_columns = ['gameId', 'batterTeamFlag', 'pitcherTeamFlag']
-            final_columns = [
+            final_columns.extend([
                 x for x in df_base_curr.columns if any(
                     y in x for y in batter_metrics
                 )
-            ]
-            final_columns = [
+            ])
+            final_columns.extend([
                 x for x in df_base_curr.columns if any(
                     y in x for y in pitcher_metrics
                 )
-            ]
+            ])
             final_columns.extend([
                 'home_team_win_pct_at_home', 'away_team_win_pct_at_away'
             ])
             final_columns.extend(['home_team_winner'])
+            final_columns = list(set(final_columns))
+            
             df_base_curr[final_columns].to_parquet(
                 CONFIG.get('paths').get('initial_featurespaces') + \
                 '{}_{}_initial_featurespace.parquet'.format(

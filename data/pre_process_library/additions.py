@@ -50,7 +50,9 @@ def add_game_date(data, path):
 
     # Add Game Date
     if 'gameId' not in data.columns:
+        print(data[[x for x in data.columns if 'game' in x]].head(10))
         data['gameId'] = data['game_id'].copy(deep=True)
+
     data.loc[:, 'gameDate'] = data['gameId'].str.split("_").apply(
         lambda x: x[-6:-3]
     )

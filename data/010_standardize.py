@@ -58,10 +58,12 @@ def process_date_innings(data, tablename='innings'):
     """
 
     # Rename innings
-    data = names.rename_table(data, tablename='innings')
+    #data = names.rename_table(data, tablename='innings')
     data = add.add_game_date(data, path)
     data = add.add_inning_half(data)
+    print("inning hald done")
     data = add.add_starting_pitcher_flag(data)
+    print('still good')
     data = add.add_team(data, path, 'inning')
     return data
 
@@ -98,7 +100,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "batting.parquet"
     )   
-
+    print('batting done')
     # Process Pitching
     df = pd.read_parquet(path+"pitching.parquet")
     df = process_date_pitching(df)
@@ -107,7 +109,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "pitching.parquet"
     )
-
+    print('pitching done')
     # Process Boxscore
     df = pd.read_parquet(path+"boxscore.parquet")
     df = process_date_boxscore(df)
@@ -116,7 +118,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "boxscore.parquet"
     )
-
+    print('boxscore done')
     # Process Innings
     df = pd.read_parquet(path+"innings.parquet")
     df = process_date_innings(df)
@@ -125,6 +127,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "innings.parquet"
     )
+    print('innings done')
     if 'day_01' in path:
         df.to_csv(
             CONFIG.get('paths').get('normalized') + \
@@ -155,8 +158,8 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2017, month=3, day=1)
-    max_date = dt.datetime(year=2018, month=11, day=1)
+    min_date = dt.datetime(year=2018, month=3, day=31)
+    max_date = dt.datetime(year=2018, month=4, day=30)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -168,7 +171,9 @@ if __name__ == "__main__":
         path = CONFIG.get('paths').get('raw')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')
         path += dd
-        try:
-            process_date_games(path)
-        except:
-            continue
+        
+        print(dd)
+        process_date_games(path)
+        ##except:
+        #    print("Failed")
+        #    continue

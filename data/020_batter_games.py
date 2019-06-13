@@ -55,20 +55,20 @@ if __name__ == "__main__":
         # Get prev 3, 5, 10 batting stats
         df.sort_values(by=['batterId', 'gameId'], ascending=True, inplace=True)
         df.reset_index(drop=True, inplace=True)
-        for days in [3, 5, 10]:
+        for days in [3]:
             for stat in stats:
                 df['{}_trail_{}_mean'.format(stat, str(days))] = df.groupby('batterId')\
                     [stat].rolling(days).mean().reset_index(drop=True)
-                df['{}_trail_{}_max'.format(stat, str(days))] = df.groupby('batterId')\
-                    [stat].rolling(days).max().reset_index(drop=True)
-                df['{}_trail_{}_min'.format(stat, str(days))] = df.groupby('batterId')\
-                    [stat].rolling(days).min().reset_index(drop=True)
+                #df['{}_trail_{}_max'.format(stat, str(days))] = df.groupby('batterId')\
+                #    [stat].rolling(days).max().reset_index(drop=True)
+                #df['{}_trail_{}_min'.format(stat, str(days))] = df.groupby('batterId')\
+                #    [stat].rolling(days).min().reset_index(drop=True)
                 df['{}_trail_{}_var'.format(stat, str(days))] = df.groupby('batterId')\
                     [stat].rolling(days).var().reset_index(drop=True)
                 df_master = pd.merge(
                     df_master,
                     df[['batterId', 'gameId', '{}_trail_{}_mean'.format(stat, str(days)),
-                        '{}_trail_{}_max'.format(stat, str(days)), '{}_trail_{}_min'.format(stat, str(days)),
+                        #'{}_trail_{}_max'.format(stat, str(days)), '{}_trail_{}_min'.format(stat, str(days)),
                         '{}_trail_{}_var'.format(stat, str(days))]],
                     how='left',
                     on=['gameId', 'batterId'],
