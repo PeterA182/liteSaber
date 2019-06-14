@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectFromModel
 CONFIG = util.load_config()
 
 
@@ -112,7 +114,7 @@ def match_games(data):
         df = pd.merge(
             home,
             away,
-            how='left',
+            how='inner',
             on=['gameId'],
             suffixes=['_home', '_away'],
             validate='1:1'
@@ -191,16 +193,16 @@ def apply_pca(train_games, test_games, pca_pct):
     # --------------------
     # Batting
     # Home
-    pca = PCA(20, svd_solver='full')
+    pca = PCA()
     train_games_pca_home_bat = pca.fit_transform(train_games[[x for x in train_games.columns if ((x[:6] == 'batter') & (x[-5:] == '_home'))]])
     train_games_pca_home_bat = pd.DataFrame(train_games_pca_home_bat)
     train_games_pca_home_bat.columns = ['PCA_home_batting{}'.format(str(i)) for i in range(train_games_pca_home_bat.shape[1])]
     test_games_pca_home_bat = pca.transform(test_games[[x for x in test_games.columns if ((x[:6] == 'batter') & (x[-5:] == '_home'))]])
     test_games_pca_home_bat = pd.DataFrame(test_games_pca_home_bat)
     test_games_pca_home_bat.columns = ['PCA_home_batting{}'.format(str(i)) for i in range(test_games_pca_home_bat.shape[1])]
-    
+    train_games_pca_home_bat.to_csv('/Users/peteraltamura/Desktop/home_bat.csv', index=False)
     # Away
-    pca = PCA(20, svd_solver='full')
+    pca = PCA()
     train_games_pca_away_bat = pca.fit_transform(train_games[[x for x in train_games.columns if ((x[:6] == 'batter') & (x[-5:] == '_away'))]])
     train_games_pca_away_bat = pd.DataFrame(train_games_pca_away_bat)
     train_games_pca_away_bat.columns = ['PCA_away_batting{}'.format(str(i)) for i in range(train_games_pca_away_bat.shape[1])]
@@ -211,7 +213,7 @@ def apply_pca(train_games, test_games, pca_pct):
     # --------------------
     # Pitching
     # Home
-    pca = PCA(20, svd_solver='full')
+    pca = PCA()
     train_games_pca_home_pitch = pca.fit_transform(train_games[[x for x in train_games.columns if ((x[:7] == 'pitcher') & (x[-5:] == '_home'))]])
     train_games_pca_home_pitch = pd.DataFrame(train_games_pca_home_pitch)
     train_games_pca_home_pitch.columns = ['PCA_home_pitching{}'.format(str(i)) for i in range(train_games_pca_home_pitch.shape[1])]
@@ -220,7 +222,7 @@ def apply_pca(train_games, test_games, pca_pct):
     test_games_pca_home_pitch.columns = ['PCA_home_pitching{}'.format(str(i)) for i in range(test_games_pca_home_pitch.shape[1])]
         
     # Away
-    pca = PCA(20, svd_solver='full')
+    pca = PCA()
     train_games_pca_away_pitch = pca.fit_transform(train_games[[x for x in train_games.columns if ((x[:7] == 'pitcher') & (x[-5:] == '_away'))]])
     train_games_pca_away_pitch = pd.DataFrame(train_games_pca_away_pitch)
     train_games_pca_away_pitch.columns = ['PCA_away_pitching{}'.format(str(i)) for i in range(train_games_pca_away_pitch.shape[1])]
@@ -241,6 +243,27 @@ def apply_pca(train_games, test_games, pca_pct):
     test_games = test_games.join(test_games_pca_away_pitch)
 
     return train_games, test_games
+
+
+def select_features(train_games, test_games, train_result, test_result):
+    """
+    """
+
+    # Split label gameIds
+    train_game_ids = train_games.loc[:, ['gameId', 'away_team_win_pct_at_away', 'home_team_win_pct_at_home']]
+    test_game_ids = test_games.loc[:, ['gameId', 'away_team_win_pct_at_away', 'home_team_win_pct_at_home']]
+    train_games.drop(labels=['gameId', 'away_team_win_pct_at_away', 'home_team_win_pct_at_home'], axis=1, inplace=True)
+    test_games.drop(labels=['gameId', 'away_team_win_pct_at_away', 'home_team_win_pct_at_home'], axis=1, inplace=True)
+    train_games.to_csv('/Users/peteraltamura/Desktop/pre_pca_train.csv', index=False)
+    
+    # Set X and Y
+    sel = SelectFromModel(RandomForestClassifier(n_estimators = 100))
+    sel.fit(train_games, train_result)
+    selected_feat = train_games.columns[(sel.get_support())]
+    train_games = train_games.loc[:, selected_feat]
+
+    # Filter train and test
+    return list(selected_feat)
 
 
 if __name__ == "__main__":
@@ -308,16 +331,14 @@ if __name__ == "__main__":
         # Train Test Split
         train_games, test_games, train_result, test_result = \
             train_test_split(df_matchups, df_targets, test_size=test_size, random_state=0)
-        print(train_games.shape)
-        # Scale before PCA
-        train_games, test_games = scale_features(train_games, test_games)
-        train_games.to_csv('/Users/peteraltamura/Desktop/train_pre_pca.csv', index=False)
-        print(train_games.shape)
-
-        # Run PCA
-        train_games, test_games = apply_pca(train_games, test_games, pca_pct=pca_pct)
-        print(train_games.shape)
+        
+        # Select Features
+        selected_feats = \
+            select_features(train_games, test_games, train_result, test_result)
+        
         # Save
+        train_games = train_games.loc[:, selected_feats]
+        test_games = test_games.loc[:, selected_feats]
         train_games.to_parquet(
             CONFIG.get('paths').get('full_featurespaces') + \
             '{}_train_full_featurespace.parquet'.format(str(yr))

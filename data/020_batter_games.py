@@ -88,7 +88,7 @@ if __name__ == "__main__":
                 on=['gameId', 'batterId'],
                 validate='1:1'
             )
-        
+
         # Final
         for gid in list(pd.Series.unique(df_master.gameId)):
             dest_path = CONFIG.get('paths').get('batter_stats') + str(gid) + "/"

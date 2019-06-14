@@ -454,7 +454,6 @@ if __name__ == "__main__":
 
             # Subset base for current team
             df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
-            print(sum(df_base_curr.gameId.isnull()))
 
             # Add previous gameIds to home
             df_base_curr = pd.merge(
@@ -550,28 +549,35 @@ if __name__ == "__main__":
                     list(set(df_base_curr['gameId']))
                 ),
             :]
-
+            print('1------------------')
+            print(np.mean(team_batting['batterTeamFlag'].isnull()))
             # Get batter frequency
             team_batting = batter_appearance_freq(team_batting, top_batter_count)
             team_batting.to_csv('/Users/peteraltamura/Desktop/team_batting.csv', index=False)
             team_batting = pivot_stats_wide(team_batting,
                                             swing_col='batterId',
                                             metric_cols=batter_metrics)
-
+            
+            print('2------------------')
+            print(np.mean(team_batting['batterTeamFlag'].isnull()))
+            
             # Split batting stats to home team
             df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
             team_batting_home = team_batting.loc[team_batting['batterTeamFlag'] == 'home', :]
             team_batting_home.rename(columns={'gameId': 'homeGameId'}, inplace=True)
+            print("2.5----------------------")
+            print(np.mean(team_batting_home['batterTeamFlag'].isnull()))
             df_base_curr_home = pd.merge(
                 df_base_curr_home,
                 team_batting_home,
-                how='left',
+                how='inner',
                 left_on=['homePrevGameId'],
                 right_on=['homeGameId'],
                 validate='1:1'
             )
             df_base_curr_home.drop(labels=['homeGameId'], axis=1, inplace=True)
-            
+            print("275-------------------------------")
+            print(np.mean(df_base_curr_home['batterTeamFlag'].isnull()))
             # Split batting stats to away team
             df_base_curr_away = df_base_curr.loc[df_base_curr['away_code'] == team, :]
             team_batting_away = team_batting.loc[team_batting['batterTeamFlag'] == 'away', :]
@@ -579,13 +585,16 @@ if __name__ == "__main__":
             df_base_curr_away = pd.merge(
                 df_base_curr_away,
                 team_batting_away,
-                how='left',
+                how='inner',
                 left_on=['awayPrevGameId'],
                 right_on=['awayGameId'],
                 validate='1:1'
             )
             df_base_curr_away.drop(labels=['awayGameId'], axis=1, inplace=True)
-
+            print("3----------------")
+            print(np.mean(df_base_curr_home['batterTeamFlag'].isnull()))
+            print("4----------------")
+            print(np.mean(df_base_curr_away['batterTeamFlag'].isnull()))
             # Concatenate home and away
             df_base_curr = pd.concat(
                 objs=[df_base_curr_home, df_base_curr_away],
