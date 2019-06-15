@@ -260,7 +260,6 @@ def select_features(train_games, test_games, train_result, test_result):
     sel = SelectFromModel(RandomForestClassifier(n_estimators = 100))
     sel.fit(train_games, train_result)
     selected_feat = train_games.columns[(sel.get_support())]
-    train_games = train_games.loc[:, selected_feat]
 
     # Filter train and test
     return list(selected_feat)

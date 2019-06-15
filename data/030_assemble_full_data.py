@@ -178,6 +178,10 @@ def get_full_batting_stats(team):
         if pd.Series.nunique(df['gameId']) != 1:
             continue
         gameId = df['gameId'].iloc[0]
+        print(gameId)
+        print(gameId.split("_")[4]==team)
+        print(gameId.split("_")[5] == team)
+        sdfsdfsd
         df.loc[df['gameId'].apply(lambda x: x.split("_")[4]) == team, 'batterTeamFlag'] = 'away'
         df.loc[df['gameId'].apply(lambda x: x.split("_")[5]) == team, 'batterTeamFlag'] = 'home'
         df_batting.append(df)
