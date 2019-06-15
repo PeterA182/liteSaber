@@ -41,7 +41,7 @@ def fip_metric(data, trails):
     return data
 
 
-def k_pct(data, trails):
+def k_percentage_metric_pitcher(data, trails):
     """
     """
 
@@ -50,7 +50,41 @@ def k_pct(data, trails):
                      ascending=True,
                      inplace=True)
     for trail in trails:
-        data['
+        data['k'] = data.groupby('pitcherId')\
+            ['pitcherSO'].rilling(trail).sum().reset_index(drop=True)
+        data['bf'] = data.groupby('pitcherId')\
+            ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
+        data['pitcherKPercentage_trail{}'.format(trail)] = (
+            data['k'] / data['bf']
+        )
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'pitcherKPercentage' in x]
+    data = data.loc[:, return_cols]
+    return data
+        
+
+def walk_percentage_metric_pitcher(data, trails):
+    """
+    """
+    
+    # Sort
+    data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['numerator'] = data.groupby('pitcherId')\
+            ['pitcherBBAllowed'].rolling(trail).sum().reset_index(drop=True)
+        data['denominator'] = data.groupby('pitcherId')\
+            ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
+        data['pitcherBBPercentage_trail{}'.format(trail)] = (
+            data.numerator / data.denominator
+        )
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'pitcherBBPercentage' in x]
+    data = data.loc[:, return_cols]
+    return data
+
+
 
 
 
@@ -96,7 +130,7 @@ if __name__ == "__main__":
             'gameId', 'gameDate', 'pitcherId', 'pitcherTeamFlag'
         ]].drop_duplicates(inplace=False)
         
-        # Add Walk Percentage
+        # Add FIP
         fip = fip_metric(df, trails)
         df_master = pd.merge(
             df_master,
@@ -105,6 +139,43 @@ if __name__ == "__main__":
             on=['gameId', 'gameDate', 'pitcherId'],
             validate='1:1'
         )
+
+        # Add K Percentage
+        k_pct = k_percentage_metric_pitcher(df, trails)
+        df_master = pd.merge(
+            df_master,
+            k_pct,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+        # Add Walk Percentage
+        walk_pct = walk_percentage_metric_pitcher(df, trails)
+        df_master = pd.merge(
+            df_master,
+            walk_pct,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+        #
+        # ------------------------------
+        # Final
+        for gid in list(pd.Series.unique(df_master.gameId)):
+            dest_path = CONFIG.get('paths').get('pitcher_saber') + str(gid) + "/"
+            if not os.path.exists(dest_path):
+                os.makedirs(dest_path)
+            df_master.loc[df_master['gameId'] == gid, :].to_parquet(
+                CONFIG.get('paths').get('pitcher_saber') + \
+                '{}pitcher_saber.parquet'.format(str(gid))
+            )
+            df_master.loc[df_master['gameId'] == gid, :].to_csv(
+                CONFIG.get('paths').get('pitcher_saber') + \
+                '{}pitcher_saber.csv'.format(str(gid)), index=False
+            )
+        
 
             
 
