@@ -1,0 +1,28 @@
+name: litesaber_jupyter
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ipython=6.2.1=py36_0
+  - jupyterlab
+  - pyspark
+  - jinja2=2.9.6=py36_0
+  - pandas=0.22.0=py36_0
+  - passlib=1.7.1=py36_0
+  - pip=9.0.1=py36_0
+  - python=3.6.4=0
+  - pytz=2017.2=py36_0
+  - requests=2.14.2=py36_0
+  - toolz=0.8.2=py36_0
+  - beautifulsoup4=4.6.0=py36_0
+  - werkzeug=0.12.2=py36_0
+  - dask=0.16.1
+  - distributed=1.20.2
+  - openpyxl=2.5.1=py36_0
+  - pylint=1.8.1
+  - pytest=3.3.2
+  - pyarrow=0.9.0=py36_0
+  - psycopg2=2.7.5
+  - xlrd=1.1.0=py36_0
+  - matplotlib=3.0.3=py36_0
+  - keyrings.alt=3.0=py36_0

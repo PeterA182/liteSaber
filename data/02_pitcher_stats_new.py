@@ -85,7 +85,7 @@ def walk_percentage_metric_pitcher(data, trails):
     return data
 
 
-def era_avg_prev_metrics(data, trails):
+def era_avg_prev_metric(data, trails):
     """
     """
     
@@ -102,7 +102,7 @@ def era_avg_prev_metrics(data, trails):
     return data
 
 
-def era_max_prev_metrics(data, trails):
+def era_max_prev_metric(data, trails):
     """
     """
 
@@ -132,7 +132,7 @@ def hr_per_batter_faced(data, trails):
             ['pitcherHR'].rolling(trail).sum().reset_index(drop=True)
         data['denominator'] = data.groupby('pitcherId')\
             ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
-        data['hrPerBF_trail{}'.format(trail)] = {
+        data['hrPerBF_trail{}'.format(trail)] = (
             data.numerator / data.denominator
         )
     return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
@@ -214,7 +214,7 @@ if __name__ == "__main__":
         )
 
         # Add ERA Trail
-        era_prev = era_prev_metrics(df, trails)
+        era_prev = era_avg_prev_metric(df, trails)
         df_master = pd.merge(
             df_master,
             era_prev,
@@ -225,7 +225,7 @@ if __name__ == "__main__":
 
 
         # Add ERA Max Trail
-        era_max_prev = era_max_prev_metrics(df, trails)
+        era_max_prev = era_max_prev_metric(df, trails)
         df_master = pd.merge(
             df_master,
             era_max_prev,
