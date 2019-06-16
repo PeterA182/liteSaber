@@ -51,7 +51,7 @@ def k_percentage_metric_pitcher(data, trails):
                      inplace=True)
     for trail in trails:
         data['k'] = data.groupby('pitcherId')\
-            ['pitcherSO'].rilling(trail).sum().reset_index(drop=True)
+            ['pitcherSO'].rolling(trail).sum().reset_index(drop=True)
         data['bf'] = data.groupby('pitcherId')\
             ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
         data['pitcherKPercentage_trail{}'.format(trail)] = (
@@ -85,7 +85,60 @@ def walk_percentage_metric_pitcher(data, trails):
     return data
 
 
+def era_avg_prev_metrics(data, trails):
+    """
+    """
+    
+    # Sort
+    data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['pitcherERA_trail{}'.format(trail)] = data.groupby('pitcherId')\
+            ['pitcherERA'].rolling(trail).mean().reset_index(drop=True)
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'pitcherERA_trail' in x]
+    data = data.loc[:, return_cols]
+    return data
 
+
+def era_max_prev_metrics(data, trails):
+    """
+    """
+
+    # Sort
+    data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['pitcherERA_max_trail{}'.format(trail)] = data.groupby('pitcherId')\
+            ['pitcherERA'].rolling(trail).max().reset_index(drop=True)
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'pitcherERA_max' in x]
+    data = data.loc[:, return_cols]
+    return data
+
+
+def hr_per_batter_faced(data, trails):
+    """
+    """
+
+    # Sort
+    data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['numerator'] = data.groupby('pitcherId')\
+            ['pitcherHR'].rolling(trail).sum().reset_index(drop=True)
+        data['denominator'] = data.groupby('pitcherId')\
+            ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
+        data['hrPerBF_trail{}'.format(trail)] = {
+            data.numerator / data.denominator
+        )
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'hrPerBF_trail' in x]
+    data = data.loc[:, return_cols]
+    return data
 
 
 if __name__ == "__main__":
@@ -155,6 +208,37 @@ if __name__ == "__main__":
         df_master = pd.merge(
             df_master,
             walk_pct,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+        # Add ERA Trail
+        era_prev = era_prev_metrics(df, trails)
+        df_master = pd.merge(
+            df_master,
+            era_prev,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+
+        # Add ERA Max Trail
+        era_max_prev = era_max_prev_metrics(df, trails)
+        df_master = pd.merge(
+            df_master,
+            era_max_prev,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+        # HR Per BF
+        hr_per_bf = hr_per_batter_faced(data, trails)
+        df_master = pd.merge(
+            df_master,
+            hr_per_bf,
             how='left',
             on=['gameId', 'gameDate', 'pitcherId'],
             validate='1:1'

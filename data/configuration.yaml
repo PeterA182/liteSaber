@@ -5,6 +5,7 @@ paths:
   batter_stats: /Volumes/Transcend/020_gameday_batter_records/
   batter_saber: /Volumes/Transcend/020_gameday_batter_saber/
   pitcher_stats: /Volumes/Transcend/021_gameday_pitcher_records/
+  pitcher_saber: /Volumes/Transcend/020_gameday_pitcher_saber/
   game_team_metrics: /Volumes/Transcend/game_team_metrics/
   matchup_schedule: /Volumes/Transcend/matchup_schedule/
   initial_featurespaces: /Volumes/Transcend/030_gameday_initial_featurespaces/
