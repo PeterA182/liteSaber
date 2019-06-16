@@ -141,6 +141,23 @@ def hr_per_batter_faced(data, trails):
     return data
 
 
+def bf_metric(data, trails):
+    """
+    """
+
+    # Sort
+    data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['bf_trailP{'.format(trail)] = data.groupby('pitcherId')\
+            ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
+    return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'bf_trail' in x]
+    data = data.loc[:, return_cols]
+    return data
+
+
 if __name__ == "__main__":
 
     # -----------
@@ -235,7 +252,7 @@ if __name__ == "__main__":
         )
 
         # HR Per BF
-        hr_per_bf = hr_per_batter_faced(data, trails)
+        hr_per_bf = hr_per_batter_faced(df, trails)
         df_master = pd.merge(
             df_master,
             hr_per_bf,

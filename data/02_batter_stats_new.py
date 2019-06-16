@@ -172,7 +172,21 @@ def woba_metric(data, trails):
     return data
 
 
+def pa_metric(data, trails):
+    """
+    """
 
+    # Sort
+    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+                     ascending=True,
+                     inplace=True)
+    for trail in trails:
+        data['ab_trail{}'.format(trail)] = data.groupby('batterId')\
+            ['batterAB'].rolling(trail).sum().reset_index(drop=True)
+    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+        [x for x in data.columns if 'ab_trail' in x]
+    data = data.loc[:, return_cols]
+    return data
 
 
 if __name__ == "__main__":
@@ -262,6 +276,16 @@ if __name__ == "__main__":
         df_master = pd.merge(
             df_master,
             woba,
+            how='left',
+            on=['gameId', 'gameDate', 'batterId'],
+            validate='1:1'
+        )
+
+        # AtBat Trail Count (for sorting in featurespace)
+        ab = pa_metric(df, trails)
+        df_master = pd.merge(
+            df_master,
+            ab,
             how='left',
             on=['gameId', 'gameDate', 'batterId'],
             validate='1:1'
