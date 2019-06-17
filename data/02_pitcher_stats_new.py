@@ -150,7 +150,7 @@ def bf_metric(data, trails):
                      ascending=True,
                      inplace=True)
     for trail in trails:
-        data['bf_trailP{'.format(trail)] = data.groupby('pitcherId')\
+        data['bf_trail{}'.format(trail)] = data.groupby('pitcherId')\
             ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
     return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
         [x for x in data.columns if 'bf_trail' in x]
@@ -256,6 +256,16 @@ if __name__ == "__main__":
         df_master = pd.merge(
             df_master,
             hr_per_bf,
+            how='left',
+            on=['gameId', 'gameDate', 'pitcherId'],
+            validate='1:1'
+        )
+
+        # BF Metric
+        bf_metric = bf_metric(df, trails)
+        df_master = pd.merge(
+            df_master,
+            bf_metric,
             how='left',
             on=['gameId', 'gameDate', 'pitcherId'],
             validate='1:1'

@@ -166,7 +166,7 @@ if __name__ == "__main__":
     dates = [min_date+dt.timedelta(days=i)
              for i in range((max_date-min_date).days+1)]
 
-    # Establish path
+    # Estalish path
     for dd in dates:
         path = CONFIG.get('paths').get('raw')
         dd = dd.strftime('year_%Ymonth_%mday_%d/')

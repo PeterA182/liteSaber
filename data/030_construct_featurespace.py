@@ -81,6 +81,38 @@ def get_prev_game_id(data):
     return team_tables
 
 
+def add_starting_pitcher_id(data, year):
+    """
+    """
+    # determine gameid and date combinations we have batting and pitching for
+    inning_tables = pd.concat(
+        objs=[
+            pd.read_parquet(
+                CONFIG.get('paths').get('normalized')+
+                d+"/innings.parquet",
+                columns=['gameId', 'home_starting_pitcher',
+                             'away_starting_pitcher']
+            )
+            for d in os.listdir(CONFIG.get('paths').get('normalized'))
+            if year in d and 
+            if os.path.isfile(
+                CONFIG.get('paths').get('normalized')+d+
+                '/innings.parquet'
+            )
+        ],
+        axis=0
+    )
+    inning_tables.drop_duplicates(inplace=True)
+    data = pd.merge(
+        data,
+        inning_tables,
+        how='left',
+        on=['gameId'],
+        validate='1:1'
+    )
+    return inning_tables
+
+
 def win_loss_by_disposition(data):
     """
     """
@@ -257,7 +289,9 @@ def add_pitching_sabermetrics(team, pitcher_metrics):
               in pitching],
         axis=0
     )
-    df = pd.pivot_table(
+
+    # Add the rest
+    df = df.pivot_table(
         index=['gameId'],
         columns=['bf_trail3'],
         values=[
@@ -268,6 +302,49 @@ def add_pitching_sabermetrics(team, pitcher_metrics):
         aggfunc='first'
     )
     return df
+
+
+def add_starting_pitcher_sabermetrics(data, team, pitcher_metrics):
+    """
+    """
+
+    path = CONFIG.get('paths').get('pitcher_saber')
+    pitching = [
+        path+dd+"/pitcher_saber.parquet" for dd in
+        os.listdir(path) if team in dd
+    ]
+    df = pd.concat(
+        objs=[pd.read_parquet(pitch_path) for pitch_path
+              in pitching],
+        axis=0
+    )
+
+    # Determine whether to add home starter or away starter
+    # if in 5, home
+    if team in df['gameId'].iloc[0].split("_")[5]:
+        starter_disposition = 'home_starting_pitcher'
+    elif team in df['gameId'].iloc[0].split("_")[4]:
+        starter_disposition = 'away_starting_pitcher'
+    else:
+        raise Exception("Home or Away Disposition Still Unknown")
+
+    # Cut down to gameId, pitcherId, and stats
+    df = df.loc[:, ['gameId', 'pitcherId'] + [
+        x for x in df.columns if any(
+            metric in x for metric in pitcher_metrics
+        )
+    ]]
+    data = pd.merge(
+        data,
+        df,
+        how='left',
+        left_on=['gameId', starter_disposition],
+        right_on=['gameId', 'pitcherId'],
+        validate='1:1'
+    )
+    return data
+    
+
 
 
 if __name__ == "__main__":
@@ -340,6 +417,9 @@ if __name__ == "__main__":
 
             # Subset base for current team
             df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
+
+            # Add starting pitcher from Normalized Innings table
+            df_base_curr = add_starting_pitcher_id(df_base_curr, yr)
 
             # Add previous gameIds to home
             df_base_curr = pd.merge(
@@ -421,10 +501,14 @@ if __name__ == "__main__":
                 validate='1:1'
             )
 
+            # Add Starter Sabermetrics from pitchers_wide
+            df_base_curr = add_starting_pitcher_sabermetrics(
+                df_base_curr, team, pitcher_metrics
+            )
+
             # Add batting Sabermetrics
             batter_wide = add_batting_sabermetrics(team, batter_metrics)
 
             # Add pitching Sabermetrics
             pitcher_wide = add_pitching_sabermetrics(team, pitcher_metrics)
-        
             
