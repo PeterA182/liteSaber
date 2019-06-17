@@ -8,7 +8,7 @@ import utilities as util
 CONFIG = util.load_config()
 
 
-def get_prev_batting_game_id():
+def get_prev_batting_game_id(year):
     """
     """
     
@@ -16,11 +16,12 @@ def get_prev_batting_game_id():
     batting_gameId_dates = pd.concat(
             objs=[
                 pd.read_parquet(CONFIG.get('paths').get('batter_saber')+
-                                d+"/batter_stats.parquet",
+                                d+"/batter_saber.parquet",
                                 columns=['gameId', 'gameDate'])
                 for d in os.listdir(CONFIG.get('paths').get('batter_saber'))
                 if os.path.isfile(CONFIG.get('paths').get('batter_saber')+d+
                                   '/batter_saber.parquet')
+                and year in d
             ],
             axis=0
     )
@@ -32,7 +33,7 @@ def get_prev_batting_game_id():
     return batting_gameId_dates
 
 
-def get_prev_pitching_game_id():
+def get_prev_pitching_game_id(year):
     """
     """
 
@@ -45,6 +46,7 @@ def get_prev_pitching_game_id():
                 for d in os.listdir(CONFIG.get('paths').get('pitcher_saber'))
                 if os.path.isfile(CONFIG.get('paths').get('pitcher_saber')+d+
                                   '/pitcher_saber.parquet')
+                and year in d
             ],
             axis=0
     )
@@ -95,7 +97,7 @@ def add_starting_pitcher_id(data, year):
             )
             for d in os.listdir(CONFIG.get('paths').get('normalized'))
             if year in d and 
-            if os.path.isfile(
+            os.path.isfile(
                 CONFIG.get('paths').get('normalized')+d+
                 '/innings.parquet'
             )
@@ -388,8 +390,8 @@ if __name__ == "__main__":
         )
 
         # Prev Batting and Pitching GameID and Filter
-        prev_batting_ids = get_prev_batting_game_id()
-        prev_pitching_ids = get_prev_pitching_game_id()
+        prev_batting_ids = get_prev_batting_game_id(yr)
+        prev_pitching_ids = get_prev_pitching_game_id(yr)
         df_base = df_base.loc[(
             (df_base['gameId'].isin(list(prev_batting_ids['gameId'])))
             &
@@ -408,11 +410,15 @@ if __name__ == "__main__":
         # ---------------------------------------------
         # Iterate over teams and apend final table to list
         complete_team_tables = []
+        teams_list = list(set(
+            list(df_base['away_code'])+
+            list(df_base['home_code'])
+        ))
         
         for team in teams_list:
             if team in ['aas', 'nas', 'umi', 'atf', 'lvg']:
                 continue
-
+            
             print("Now creating featurespace for team: {}".format(team))
 
             # Subset base for current team
