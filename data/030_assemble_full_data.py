@@ -148,12 +148,12 @@ def get_pitching_games_dates():
     """
     pitching_gameId_dates = pd.concat(
             objs=[
-                pd.read_parquet(CONFIG.get('paths').get('pitcher_stats')+
-                                d+"/pitcher_stats.parquet",
+                pd.read_parquet(CONFIG.get('paths').get('pitcher_saber')+
+                                d+"/pitcher_saber.parquet",
                                 columns=['gameId', 'gameDate'])
-                for d in os.listdir(CONFIG.get('paths').get('pitcher_stats'))
-                if os.path.isfile(CONFIG.get('paths').get('pitcher_stats')+d+
-                                  '/pitcher_stats.parquet')
+                for d in os.listdir(CONFIG.get('paths').get('pitcher_saber'))
+                if os.path.isfile(CONFIG.get('paths').get('pitcher_saber')+d+
+                                  '/pitcher_saber.parquet')
             ],
             axis=0
     )
@@ -178,12 +178,10 @@ def get_full_batting_stats(team):
         if pd.Series.nunique(df['gameId']) != 1:
             continue
         gameId = df['gameId'].iloc[0]
-        print(gameId)
-        print(gameId.split("_")[4]==team)
-        print(gameId.split("_")[5] == team)
-        sdfsdfsd
-        df.loc[df['gameId'].apply(lambda x: x.split("_")[4]) == team, 'batterTeamFlag'] = 'away'
-        df.loc[df['gameId'].apply(lambda x: x.split("_")[5]) == team, 'batterTeamFlag'] = 'home'
+        df.loc[df['gameId'].apply(lambda x: x.split("_")[4][:3]) == team,
+               'batterTeamFlag'] = 'away'
+        df.loc[df['gameId'].apply(lambda x: x.split("_")[5][:3]) == team,
+               'batterTeamFlag'] = 'home'
         df_batting.append(df)
     df_batting = pd.concat(
         objs=df_batting,
@@ -213,10 +211,10 @@ def get_full_pitching_stats(team):
     """
 
     df_pitching = []
-    fnames = [CONFIG.get('paths').get('pitcher_stats')+gid+
-              "/pitcher_stats.parquet"
+    fnames = [CONFIG.get('paths').get('pitcher_saber')+gid+
+              "/pitcher_saber.parquet"
               for gid in os.listdir(
-                      CONFIG.get('paths').get('pitcher_stats')
+                      CONFIG.get('paths').get('pitcher_saber')
               )]
     fnames = [f for f in fnames if team in f]
     for fname in fnames:
@@ -553,17 +551,13 @@ if __name__ == "__main__":
                     list(set(df_base_curr['gameId']))
                 ),
             :]
-            print('1------------------')
-            print(np.mean(team_batting['batterTeamFlag'].isnull()))
+            
             # Get batter frequency
             team_batting = batter_appearance_freq(team_batting, top_batter_count)
             team_batting.to_csv('/Users/peteraltamura/Desktop/team_batting.csv', index=False)
             team_batting = pivot_stats_wide(team_batting,
                                             swing_col='batterId',
                                             metric_cols=batter_metrics)
-            
-            print('2------------------')
-            print(np.mean(team_batting['batterTeamFlag'].isnull()))
             
             # Split batting stats to home team
             df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
@@ -580,8 +574,7 @@ if __name__ == "__main__":
                 validate='1:1'
             )
             df_base_curr_home.drop(labels=['homeGameId'], axis=1, inplace=True)
-            print("275-------------------------------")
-            print(np.mean(df_base_curr_home['batterTeamFlag'].isnull()))
+
             # Split batting stats to away team
             df_base_curr_away = df_base_curr.loc[df_base_curr['away_code'] == team, :]
             team_batting_away = team_batting.loc[team_batting['batterTeamFlag'] == 'away', :]
@@ -595,10 +588,7 @@ if __name__ == "__main__":
                 validate='1:1'
             )
             df_base_curr_away.drop(labels=['awayGameId'], axis=1, inplace=True)
-            print("3----------------")
-            print(np.mean(df_base_curr_home['batterTeamFlag'].isnull()))
-            print("4----------------")
-            print(np.mean(df_base_curr_away['batterTeamFlag'].isnull()))
+
             # Concatenate home and away
             df_base_curr = pd.concat(
                 objs=[df_base_curr_home, df_base_curr_away],
