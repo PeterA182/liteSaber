@@ -24,7 +24,7 @@ def get_prev_game_id(data):
         team_data = data.loc[data['gameId'].str.contains(team), :]
         team_data.sort_values(by=['gameId'], ascending=True, inplace=True)
         team_data.loc[:, 'prevGameId'] = team_data['gameId'].shift(1)
-        team_data['team_code'] = team
+        team_data.loc[:, 'team_code'] = team
         team_tables.append(team_data[['gameId', 'team_code', 'prevGameId']])   
     team_tables = pd.concat(
         objs=team_tables,
@@ -32,6 +32,37 @@ def get_prev_game_id(data):
     )
     return team_tables
 
+
+def get_starters():
+    """
+    """
+
+    # Read in
+    # Get all paths for year
+    innings_paths = [
+        CONFIG.get('paths').get('normalized') + date_str + "/innings.parquet"
+        for date_str in os.listdir(CONFIG.get('paths').get('normalized'))
+    ]
+    inning_paths = [x for x in innings_paths if os.path.isfile(x)]
+
+    # Process and append batting paths
+    df = pd.concat(
+            objs=[pd.read_parquet(i_path) for i_path in inning_paths],
+            axis=0
+    )
+
+    # Add Date
+    df.loc[:, 'gameDate'] = pd.to_datetime(
+            df['gameDate'], infer_datetime_format=True
+    )
+
+    # cols
+    cols = ['home_starting_pitcher', 'away_starting_pitcher']
+    df = df.loc[:, ['gameId'] + cols].drop_duplicates(inplace=False)
+    print("Starting Pitchers table shape")
+    print(df.shape)
+    return df
+    
 
 def win_loss_by_disposition(data):
     """
@@ -303,7 +334,7 @@ def get_full_linescore_summaries(team):
     return df_linescore_summaries
 
 
-def pivot_stats_wide(data, swing_col, metric_cols):
+def pivot_stats_wide(data, swing_col, metric_cols, starter_ids=None):
     """
     """
 
@@ -338,14 +369,18 @@ def pivot_stats_wide(data, swing_col, metric_cols):
             )
         ]
         idx_cols = ['gameId', 'pitcherTeamFlag']
-        freq = data['pitcherId'].value_counts()
-        freq = pd.DataFrame(freq).reset_index(inplace=False)
-        freq.columns = ['pitcherId', 'freq']
-        freq.sort_values(by=['freq'], ascending=False, inplace=True)
-        freq['rank'] = range(freq.shape[0])
-        freq = freq.loc[:, ['pitcherId', 'rank']]
-        data = pd.merge(data, freq, how='left', on=['pitcherId'], validate='m:1')
-        data.sort_values(by=['rank'], ascending=False, inplace=True)
+        if starter_ids:
+            data = data.loc[data[swing_col].isin(starter_ids), :]
+            data.loc[:, 'rank'] = 1
+        else:
+            freq = data['pitcherId'].value_counts()
+            freq = pd.DataFrame(freq).reset_index(inplace=False)
+            freq.columns = ['pitcherId', 'freq']
+            freq.sort_values(by=['freq'], ascending=False, inplace=True)
+            freq['rank'] = range(freq.shape[0])
+            freq = freq.loc[:, ['pitcherId', 'rank']]
+            data = pd.merge(data, freq, how='left', on=['pitcherId'], validate='m:1')
+            data.sort_values(by=['rank'], ascending=False, inplace=True)
         
     else:
         raise
@@ -358,10 +393,16 @@ def pivot_stats_wide(data, swing_col, metric_cols):
         values=metric_cols
     )
     data.reset_index(inplace=True)
-    data.columns = [
-        x[0] if x[1] == '' else str(x[0])+"_"+str(x[1])
-        for x in data.columns
-    ]
+    if starter_ids:
+        data.columns = [
+            x[0] if x[1] == "" else str(x[0])+"_"+str(x[1])+"_starter"
+            for x in data.columns
+        ]
+    else:
+        data.columns = [
+            x[0] if x[1] == '' else str(x[0])+"_"+str(x[1])
+            for x in data.columns
+        ]
     
     return data
 
@@ -380,7 +421,7 @@ if __name__ == "__main__":
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
                        'SeasonLosses', 'SeasonWins', 'numberPitches',
                        'Outs', 'RunsAllowed', 'Strikes', 'SO']
-    top_batter_count = 12
+    top_batter_count = 9
     batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
                       'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
                       'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
@@ -437,6 +478,10 @@ if __name__ == "__main__":
         #team_prev_merge_key_dict = get_merge_key_dict(df_base)
         prev_game_ids = get_prev_game_id(df_base)
 
+        # Starters
+        # Get Starting Pitcher
+        starters_pitching = get_starters()
+        
         # Win Loss by Disposition
         home_team_win_pct_home, away_team_win_pct_away = win_loss_by_disposition(df_base)
         
@@ -457,6 +502,8 @@ if __name__ == "__main__":
             # Subset base for current team
             df_base_curr = df_base.loc[df_base['gameId'].str.contains(team), :]
 
+            # --------------------  --------------------
+            # --------------------  --------------------
             # Add previous gameIds to home
             df_base_curr = pd.merge(
                 df_base_curr,
@@ -470,7 +517,9 @@ if __name__ == "__main__":
                 columns={'prevGameId': 'homePrevGameId'},
                 inplace=True
             )
-            
+
+            # --------------------  --------------------
+            # --------------------  --------------------
             # Add prev gameIds to away
             df_base_curr = pd.merge(
                 df_base_curr,
@@ -485,6 +534,8 @@ if __name__ == "__main__":
                 inplace=True
             )
 
+            # --------------------  --------------------
+            # --------------------  --------------------
             # Merge home team win pct at home table
             df_base_curr.drop_duplicates(subset=['homePrevGameId'], inplace=True)
             df_base_curr = pd.merge(
@@ -502,6 +553,8 @@ if __name__ == "__main__":
                 inplace=True
             )
 
+            # --------------------  --------------------
+            # --------------------  --------------------
             # Merge away team win pct at home table
             df_base_curr.drop_duplicates(subset=['awayPrevGameId'], inplace=True)
             df_base_curr = pd.merge(
@@ -519,7 +572,8 @@ if __name__ == "__main__":
                 inplace=True
             )
 
-            # --------------------
+            # --------------------  --------------------
+            # --------------------  --------------------
             # Add Full Linescore to summary
             df_linescore_summary = get_full_linescore_summaries(team)
             df_linescore_summary = df_linescore_summary.loc[:, [
@@ -538,8 +592,9 @@ if __name__ == "__main__":
                 validate='1:1'
             )
 
-            # --------------------
-            # Filter to team games for batting, sort and merge
+            # --------------------  --------------------
+            # --------------------  --------------------
+            # Assemble full batting stats home/away and concat
             team_batting = get_full_batting_stats(team)
 
             # Filter or go to next
@@ -554,7 +609,6 @@ if __name__ == "__main__":
             
             # Get batter frequency
             team_batting = batter_appearance_freq(team_batting, top_batter_count)
-            team_batting.to_csv('/Users/peteraltamura/Desktop/team_batting.csv', index=False)
             team_batting = pivot_stats_wide(team_batting,
                                             swing_col='batterId',
                                             metric_cols=batter_metrics)
@@ -563,8 +617,6 @@ if __name__ == "__main__":
             df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
             team_batting_home = team_batting.loc[team_batting['batterTeamFlag'] == 'home', :]
             team_batting_home.rename(columns={'gameId': 'homeGameId'}, inplace=True)
-            print("2.5----------------------")
-            print(np.mean(team_batting_home['batterTeamFlag'].isnull()))
             df_base_curr_home = pd.merge(
                 df_base_curr_home,
                 team_batting_home,
@@ -594,15 +646,57 @@ if __name__ == "__main__":
                 objs=[df_base_curr_home, df_base_curr_away],
                 axis=0
             )
+
+            # --------------------  --------------------  --------------------
+            # --------------------  --------------------  --------------------
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
             if team_pitching.shape[0] == 0:
                 print("{} pitching was empty".format(team))
                 continue
+
+            # Pivot Wide starters
+            starter_ids = list(pd.Series.unique(
+                starters_pitching['home_starting_pitcher']
+            )) + list(pd.Series.unique(
+                starters_pitching['away_starting_pitcher']
+            ))
+            starter_ids = list(set(starter_ids))
+            starting_pitching = pivot_stats_wide(team_pitching,
+                                                swing_col='pitcherId',
+                                                metric_cols=pitcher_metrics,
+                                                starter_ids=starter_ids)
+
+            # Split Starting pitching stats to home starter
+            df_starters_home = starting_pitching.loc[
+                starting_pitching['pitcherTeamFlag'] == 'home', :]
+            df_starters_home.rename(
+                columns={
+                    x: x.replace('starter', 'home_starter')
+                    for x in df_starters_home.columns
+                },
+                inplace=True
+            )
+            df_starters_home.rename(columns={'gameId': 'homeStarterGameId'}, inplace=True)
+
+            # Split Starting pitching stats to away starter
+            df_starters_away = starting_pitching.loc[
+                starting_pitching['pitcherTeamFlag'] == 'away', :]
+            df_starters_away.rename(
+                columns={
+                    x: x.replace('starter', 'away_starter')
+                    for x in df_starters_away.columns
+                },
+                inplace=True
+            )
+            df_starters_away.rename(columns={'gameId': 'awayStarterGameId'}, inplace=True)
+            
+            # Get Non-Starter Pitching data prepared          
             team_pitching = team_pitching.loc[
                 team_pitching['gameId'].isin(
                     list(set(df_base_curr['gameId']))),
             :]
+            
             team_pitching = pitcher_appearance_freq(team_pitching, top_pitcher_count)
             team_pitching.sort_values(
                 by=['gameDate'],
@@ -614,9 +708,14 @@ if __name__ == "__main__":
                 axis=1,
                 inplace=True
             )
+
+            # Pivot Wide non-starters
+            team_pitching = team_pitching.loc[
+                ~team_pitching['pitcherId'].isin(starter_ids), :]
             team_pitching = pivot_stats_wide(team_pitching,
                                              swing_col='pitcherId',
-                                             metric_cols=pitcher_metrics)
+                                             metric_cols=pitcher_metrics,
+                                             starter_ids=None)
 
             # Split pitching stats to home team
             df_base_curr_home = df_base_curr.loc[df_base_curr['home_code'] == team, :]
@@ -652,6 +751,26 @@ if __name__ == "__main__":
                 axis=0
             )
 
+            # Merge on Starters
+            df_base_curr = pd.merge(
+                df_base_curr,
+                df_starters_away,
+                how='left',
+                left_on=['gameId'],
+                right_on=['awayStarterGameId'],
+                validate='1:1'
+            )
+            df_base_curr.drop(labels=['awayStarterGameId'], axis=1, inplace=True)
+            df_base_curr = pd.merge(
+                df_base_curr,
+                df_starters_home,
+                how='left',
+                left_on=['gameId'],
+                right_on=['homeStarterGameId'],
+                validate='1:1'
+            )
+            df_base_curr.drop(labels=['homeStarterGameId'], axis=1, inplace=True)
+
             # Create flag
             try:
                 df_base_curr.drop(labels=['home_team_flag', 'away_team_flag'],
@@ -676,6 +795,26 @@ if __name__ == "__main__":
             ])
             final_columns.extend(['home_team_winner'])
             final_columns = list(set(final_columns))
+            final_cols_idx = [
+                'gameId', 'batterTeamFlag', 'pitcherTeamFlag',
+                'home_team_winner', 'home_team_win_pct_at_home',
+                'away_team_win_pct_at_away'
+            ]
+            final_cols_bat = [
+                x for x in final_columns if (
+                    (x not in final_cols_idx) and
+                    (x[:6] == 'batter')
+                )
+            ]
+            final_cols_pitch = [
+                x for x in final_columns if (
+                    (x not in final_cols_idx) and
+                    (x[:7] == 'pitcher')
+                )
+            ]
+            final_columns = final_cols_idx +\
+                final_cols_bat + \
+                final_cols_pitch
             
             df_base_curr[final_columns].to_parquet(
                 CONFIG.get('paths').get('initial_featurespaces') + \
