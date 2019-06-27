@@ -61,9 +61,7 @@ def process_date_innings(data, tablename='innings'):
     #data = names.rename_table(data, tablename='innings')
     data = add.add_game_date(data, path)
     data = add.add_inning_half(data)
-    print("inning hald done")
     data = add.add_starting_pitcher_flag(data)
-    print('still good')
     data = add.add_team(data, path, 'inning')
     return data
 
@@ -100,7 +98,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "batting.parquet"
     )   
-    print('batting done')
+    print('    batting done')
     # Process Pitching
     df = pd.read_parquet(path+"pitching.parquet")
     df = process_date_pitching(df)
@@ -109,7 +107,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "pitching.parquet"
     )
-    print('pitching done')
+    print('    pitching done')
     # Process Boxscore
     df = pd.read_parquet(path+"boxscore.parquet")
     df = process_date_boxscore(df)
@@ -118,7 +116,7 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "boxscore.parquet"
     )
-    print('boxscore done')
+    print('    boxscore done')
     # Process Innings
     df = pd.read_parquet(path+"innings.parquet")
     df = process_date_innings(df)
@@ -127,7 +125,6 @@ def process_date_games(path):
         path.split("/")[-2] + "/" + \
         "innings.parquet"
     )
-    print('innings done')
     if 'day_01' in path:
         df.to_csv(
             CONFIG.get('paths').get('normalized') + \
@@ -135,7 +132,17 @@ def process_date_games(path):
             "innings.csv",
             index=False
         )
-
+    print('    innings done')
+    # Save Starters
+    df.loc[:, [
+        'gameId', 'inning_home_team', 'inning_away_team',
+        'home_starting_pitcher', 'away_starting_pitcher'
+    ]].to_parquet(
+        CONFIG.get('paths').get('normalized') + \
+        path.split("/")[-2] + "/" + \
+        "starters.parquet"
+    )
+    print("    starters done")
     # Process Game Linescore Summary
     df = pd.read_csv(path+"game_linescore_summary.csv", dtype=str)
     for col in ['home_win', 'home_loss', 'away_win', 'away_loss']:
@@ -148,10 +155,11 @@ def process_date_games(path):
     if 'day_01' in path:
         df.to_csv(
             CONFIG.get('paths').get('normalized') + \
-            path.split("/")[2] + "/" + \
+            path.split("/")[-2] + "/" + \
             "game_linescore_summary.csv",
             index=False
         )
+    print("    linescore done")
     
     
 
@@ -159,7 +167,7 @@ if __name__ == "__main__":
 
     # Run Log
     min_date = dt.datetime(year=2018, month=3, day=31)
-    max_date = dt.datetime(year=2018, month=4, day=30)
+    max_date = dt.datetime(year=2018, month=4, day=3)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -174,6 +182,3 @@ if __name__ == "__main__":
         
         print(dd)
         process_date_games(path)
-        ##except:
-        #    print("Failed")
-        #    continue

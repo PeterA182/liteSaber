@@ -33,6 +33,53 @@ def get_prev_game_id(data):
     return team_tables
 
 
+def get_team_starter_table(team):
+    """
+    """
+
+    starter_table_paths = [
+        CONFIG.get('paths').get('normalized') + date_str + \
+        "/starters.parquet" for date_str in
+        os.listdir(CONFIG.get('paths').get('normalized'))
+    ]
+    starter_table_paths = [x for x in starter_table_paths if os.path.isfile(x)]
+    df = pd.concat(
+        objs=[pd.read_parquet(i_path) for i_path in starter_table_paths],
+        axis=0
+    )
+
+    # Subset
+    df = df.loc[(
+        (df['inning_home_team'] == team)
+        |
+        (df['inning_away_team'] == team)
+    ), :]
+
+    # Create pitcherId col depending home or away
+    df.loc[: 'pitcherId'] = np.NaN
+    df.loc[df['inning_home_team'] == team, 'pitcherId'] = df['home_starting_pitcher']
+    df.loc[df['inning_away_team'] == team, 'pitcherId'] = df['away_starting_pitcher']
+    assert sum(df['pitcherId'].isnull()) == 0
+    
+    # Sort
+    df.sort_values(by=['pitcherId', 'gameId'], ascending=True, inplace=True)
+
+    # Index
+    df['appearance_rank'] = df.groupby('pitcherId')['gameId'].rank(
+        method='first',
+        ascending=False
+    )
+
+    # Create most recent gameId for pitcher
+    df['gameIdStarterMostRecent'] = df['gameId'].shift(1)
+    df.loc[df['appearance_rank'] == 1, 'gameIdStarterMostRecent'] = np.NaN
+
+    # Reorder and return
+    df.rename(columns={'pitcherId': 'pitcherIdStarter'}, inplace=True)
+    df = df.loc[:, ['gameId', 'pitcherIdStarter', 'gameIdStarterMostRecent']]
+    return df
+
+
 def get_starters():
     """
     """
@@ -417,10 +464,15 @@ if __name__ == "__main__":
             str(y) for y in np.arange(1967, 2020, 1)
         ]
     ]
-    top_pitcher_count = 8
+
+    # Pitcher Vars
+    bullpen_top_pitcher_count = 8
+    starter_top_pitcher_count = 6
     pitcher_metrics = ['BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
                        'SeasonLosses', 'SeasonWins', 'numberPitches',
                        'Outs', 'RunsAllowed', 'Strikes', 'SO']
+    
+    # Batter Vars
     top_batter_count = 9
     batter_metrics = ['Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
                       'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
@@ -649,11 +701,39 @@ if __name__ == "__main__":
 
             # --------------------  --------------------  --------------------
             # --------------------  --------------------  --------------------
+            # Merge Starting Pitcher Information
+            # ['gameId', 'pitcherIdStarter', 'gameIdStarterMostRecent']
+            game_starters = get_team_starter_table(team)
+            df_base_curr = pd.merge(
+                df_base_curr,
+                game_starters[['gameId', 'pitcherIdStarter', 'gameIdStarterMostRecent']],
+                how='left',
+                on=['gameId'],
+                validate='1:1'
+            )
+            print(df_base_curr[['gameId', 'pitcherIdStarter', 'gameIdStarterMostRecent']].head())
+            
+            
+            # --------------------  --------------------  --------------------
+            # --------------------  --------------------  --------------------
             # Filter to team games for pitching
             team_pitching = get_full_pitching_stats(team)
             if team_pitching.shape[0] == 0:
                 print("{} pitching was empty".format(team))
                 continue
+
+            # Merge on starter information
+            starter_stats = team_pitching.loc[:,
+                ['gameId', 'pitcherId'] + metric_cols
+            ]
+            df_base_curr = pd.merge(
+                df_base_curr,
+                starter_stats,
+                how='left',
+                left_on=['pitcherIdStarter', 'gameIdStarterMostRecent'],
+                right_on=['pitcherId', 'gameId'],
+                validate='1:1'
+            )
 
             # Pivot Wide starters
             starter_ids = list(pd.Series.unique(

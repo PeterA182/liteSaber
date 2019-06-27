@@ -190,6 +190,7 @@ def scrape_game_date(date):
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
             innings_ret = unpack_innings(ETREE.parse(urllib.request.urlopen(rbs)))
             innings_ret['game_id'] = game_id
+            innings_ret['gameId'] = game_id
             innings.append(innings_ret)
 
         except Exception as E:
@@ -227,6 +228,8 @@ def scrape_game_date(date):
         innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
                        index=False)
         innings.to_parquet(base_dest + '{}/innings.parquet'.format(date_url.replace("/", "")))
+        print(base_dest + "{}/innings.parquet".format(date_url.replace("/", "")))
+        
     except ValueError as VE:
         print("     no games on day")
 
@@ -241,13 +244,13 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=4, day=1)
-    max_date = dt.datetime(year=2018, month=5, day=31)
+    min_date = dt.datetime(year=2018, month=3, day=31)
+    max_date = dt.datetime(year=2018, month=4, day=30)
 
     # Teams
     teams = []
     base_url = "http://gd2.mlb.com/components/game/mlb/"
-    base_dest = "/Volumes/Transcend/gameday/"
+    base_dest = "/Volumes/Transcend/00_gameday/"
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
