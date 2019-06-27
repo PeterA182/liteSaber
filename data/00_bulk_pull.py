@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ETREE
 import numpy as np
 import datetime as dt
 import pandas as pd
+import multiprocessing as mp
 pd.set_option('display.max_columns', 500)
 
 
@@ -89,6 +90,7 @@ def scrape_game_date(date):
     :param date:
     :return:
     """
+    print("Scraping games from: {}".format(str(date)))
     ignore_keys = ['inning_line_score', 'batting', 'pitching', 'linescore']
     date_url = "year_{}/month_{}/day_{}".format(
         str(date.year).zfill(4),
@@ -233,6 +235,8 @@ def scrape_game_date(date):
     except ValueError as VE:
         print("     no games on day")
 
+    return 0
+
     #
     # GAME_EVENTS
     #
@@ -257,10 +261,11 @@ if __name__ == "__main__":
     dates = [min_date+dt.timedelta(days=i)
              for i in range((max_date-min_date).days+1)]
 
-    for dd in dates:
-        print("Scraping games from: {}".format(str(dd)))
-        scrape_game_date(dd)
-
+    proc_ = mp.cpu_count()
+    POOL = mp.Pool(processes=proc_)
+    r = POOL.map(scrape_game_date, dates)
+    POOL.close()
+    POOL.join()
 
 
 

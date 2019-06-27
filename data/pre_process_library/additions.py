@@ -196,7 +196,7 @@ def add_inning_half(data):
     data.loc[:, 'inning_half'] = np.NaN
 
     # DTypes
-    data.loc[:, 'atbat_start_tfs'] = data['atbat_start_tfs'].astype(float)
+    #data.loc[:, 'atbat_start_tfs'] = data['atbat_start_tfs'].astype(float)
     data.loc[:, 'inning_num'] = data['inning_num'].astype(float)
     data.loc[:, 'atbat_o'] = data['atbat_o'].astype(float)
     data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)

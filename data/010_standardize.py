@@ -5,12 +5,13 @@ import numpy as np
 import datetime as dt
 import inspect
 import utilities as util
+import multiprocessing as mp
 from pre_process_library import rename as names
 from pre_process_library import additions as add
 CONFIG = util.load_config()
 
 
-def process_date_batting(data):
+def process_date_batting(data, path):
     """
     """
 
@@ -27,7 +28,7 @@ def process_date_batting(data):
     return data
 
 
-def process_date_pitching(data):
+def process_date_pitching(data, path):
     """
     """
 
@@ -44,7 +45,7 @@ def process_date_pitching(data):
     return data
 
 
-def process_date_boxscore(data, tablename='boxscore'):
+def process_date_boxscore(data, path, tablename='boxscore'):
     """
     """
 
@@ -53,7 +54,7 @@ def process_date_boxscore(data, tablename='boxscore'):
     return data
 
 
-def process_date_innings(data, tablename='innings'):
+def process_date_innings(data, path, tablename='innings'):
     """
     """
 
@@ -78,6 +79,7 @@ def process_date_games(path):
     returns:
         None
     """
+    path = path
 
     # Get Files
     files_ = os.listdir(path)
@@ -92,7 +94,7 @@ def process_date_games(path):
     
     # Process batting
     df = pd.read_parquet(path+"batting.parquet")
-    df = process_date_batting(df)
+    df = process_date_batting(df, path)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
         path.split("/")[-2] + "/" + \
@@ -101,7 +103,7 @@ def process_date_games(path):
     print('    batting done')
     # Process Pitching
     df = pd.read_parquet(path+"pitching.parquet")
-    df = process_date_pitching(df)
+    df = process_date_pitching(df, path)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
         path.split("/")[-2] + "/" + \
@@ -110,7 +112,7 @@ def process_date_games(path):
     print('    pitching done')
     # Process Boxscore
     df = pd.read_parquet(path+"boxscore.parquet")
-    df = process_date_boxscore(df)
+    df = process_date_boxscore(df, path)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
         path.split("/")[-2] + "/" + \
@@ -119,7 +121,7 @@ def process_date_games(path):
     print('    boxscore done')
     # Process Innings
     df = pd.read_parquet(path+"innings.parquet")
-    df = process_date_innings(df)
+    df = process_date_innings(df, path)
     df.to_parquet(
         CONFIG.get('paths').get('normalized') + \
         path.split("/")[-2] + "/" + \
@@ -167,7 +169,7 @@ if __name__ == "__main__":
 
     # Run Log
     min_date = dt.datetime(year=2018, month=3, day=31)
-    max_date = dt.datetime(year=2018, month=4, day=3)
+    max_date = dt.datetime(year=2018, month=4, day=30)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -175,10 +177,17 @@ if __name__ == "__main__":
              for i in range((max_date-min_date).days+1)]
 
     # Estalish path
-    for dd in dates:
-        path = CONFIG.get('paths').get('raw')
-        dd = dd.strftime('year_%Ymonth_%mday_%d/')
-        path += dd
+    dates = [CONFIG.get('paths').get('raw') +
+             dd.strftime('year_%Ymonth_%mday_%d/') for dd in dates]
+    proc_ = mp.cpu_count()
+    POOL = mp.Pool(proc_)
+    r = POOL.map(process_date_games, dates)
+    POOL.close()
+    POOL.join()
+#    for dd in dates:
+#        path = CONFIG.get('paths').get('raw')
+#        dd = dd.strftime('year_%Ymonth_%mday_%d/')
+#        path += dd
         
-        print(dd)
-        process_date_games(path)
+#        print(dd)
+#        process_date_games(path)
