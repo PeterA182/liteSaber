@@ -110,11 +110,11 @@ if __name__ == "__main__":
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2019, month=6, day=3)
+    date = dt.datetime(year=2018, month=6, day=3)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
-    base_dest = "/Volumes/Transcend/gameday/"
+    base_dest = "/Volumes/Transcend/00_gameday/"
 
     # Iterate over today and tomorrow
     dates = [date, date+dt.timedelta(days=1)]

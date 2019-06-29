@@ -43,6 +43,8 @@ def get_team_starter_table(team):
         os.listdir(CONFIG.get('paths').get('normalized'))
     ]
     starter_table_paths = [x for x in starter_table_paths if os.path.isfile(x)]
+    print("No. Starter Tables")
+    print(len(starter_table_paths))
     df = pd.concat(
         objs=[pd.read_parquet(i_path) for i_path in starter_table_paths],
         axis=0
@@ -50,10 +52,11 @@ def get_team_starter_table(team):
 
     # Subset
     df = df.loc[(
-        (df['inning_home_team'] == team)
-        |
+        (df['inning_home_team'] == team) |
         (df['inning_away_team'] == team)
     ), :]
+    df.to_csv('/Users/peteraltamura/Desktop/team_starter_table_filtered_1.csv', index=False)
+    
 
     # Create pitcherId col depending home or away
     df.loc[:, 'pitcherId'] = np.NaN
@@ -61,6 +64,7 @@ def get_team_starter_table(team):
     df.loc[df['inning_home_team'] == team, 'pitcherId'] = df['home_starting_pitcher']
     df.loc[df['inning_away_team'] == team, 'pitcherId'] = df['away_starting_pitcher']
     assert sum(df['pitcherId'].isnull()) == 0
+    df.to_csv('/Users/peteraltamura/Desktop/team_starter_table_with_pitcherId_2.csv', index=False)
     
     # Sort
     df.sort_values(by=['pitcherId', 'gameId'], ascending=True, inplace=True)
@@ -72,12 +76,14 @@ def get_team_starter_table(team):
     df.loc[df['pitcherId']==df['pitcherId'].shift(1), 'gameIdStarterMostRecent'] = \
         df['gameId'].shift(1)
     df.loc[df['appearance_rank'] == 0, 'gameIdStarterMostRecent'] = np.NaN
+    df.to_csv('/Users/peteraltamura/Desktop/team_starter_table_with_rank_3.csv', index=False)
     df = df.loc[df['gameIdStarterMostRecent'].notnull(), :]
     df = df.loc[(df['gameId'] != df['gameIdStarterMostRecent']), :]
     
     # Reorder and return
     df.rename(columns={'pitcherId': 'pitcherIdStarter'}, inplace=True)
     df = df.loc[:, ['gameId', 'pitcherIdStarter', 'gameIdStarterMostRecent']]
+    df.to_csv('/Users/peteraltamura/Desktop/team_starter_table_final_4.csv', index=False)
     return df
 
 
@@ -522,13 +528,10 @@ if __name__ == "__main__":
         gc.collect()
         
         # Get list of teams to iterate over
-        teams_list = list(set(
-            list(df_base['away_code'])+
-            list(df_base['home_code'])
-        ))
+        teams_list = list(set(list(df_base['away_code'])+
+                              list(df_base['home_code'])))
 
         # Merge Key Dictionary by Team
-        #team_prev_merge_key_dict = get_merge_key_dict(df_base)
         prev_game_ids = get_prev_game_id(df_base)
 
         # Starters

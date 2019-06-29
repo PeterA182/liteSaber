@@ -144,10 +144,11 @@ def process_date_games(path):
             )
 
         # Save Starters
-        df.loc[:, [
+        df = df.loc[:, [
             'gameId', 'inning_home_team', 'inning_away_team',
             'home_starting_pitcher', 'away_starting_pitcher'
-        ]].to_parquet(
+        ]].drop_duplicates(inplace=False)
+        df.to_parquet(
             CONFIG.get('paths').get('normalized') + \
             path.split("/")[-2] + "/" + \
             "starters.parquet"
