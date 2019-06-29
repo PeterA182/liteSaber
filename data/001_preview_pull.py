@@ -95,13 +95,18 @@ def scrape_game_previews(date):
         probable_starters = pd.DataFrame()
         pass
 
+    outpath = base_dest + "{}/".format(date_url.replace("/", ""))
+    print(base_dest)
+    if not os.path.exists(outpath):
+        os.makedirs(outpath)
+    print(outpath)
+
     probable_starters.to_csv(
-        base_dest + "{}/probableStarters.csv".format(date_url.replace("/", "")),
+        outpath + "probableStarters.csv",
         index=False
     )
     probable_starters.to_parquet(
-        base_dest+
-        '{}/probableStarters.csv'.format(date_url.replace("/", ""))
+        outpath + 'probableStarters.parquet'
     )
     
 
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2018, month=6, day=3)
+    date = dt.datetime(year=2019, month=6, day=29)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
