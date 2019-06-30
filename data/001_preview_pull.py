@@ -8,6 +8,42 @@ import datetime as dt
 pd.set_option('display.max_columns', 500)
 
 
+def add_pitcher_ids(data):
+    """
+    """
+    last_registries = [
+        fname for fname in sorted(os.listdir(ref_dest))[-50:]
+    ]
+    registry = pd.concat(
+        objs=[
+            pd.read_parquet(ref_dest + fname) for fname in last_registries
+        ],
+        axis=0
+    )
+    for col in ['first_name', 'last_name']:
+        registry.loc[:, col] = registry[col].astype(str)
+        registry.loc[:, col] = \
+            registry[col].apply(lambda x: x.lower().strip())
+    registry.to_csv('/Users/peteraltamura/Desktop/registry_all.csv')
+    registry.reset_index(drop=True, inplace=True)
+    registry.drop_duplicates(
+        subset=['first_name', 'last_name', 'team'],
+        inplace=True
+    )
+    data[['starterFirstName', 'starterLastName']].to_csv(
+        '/Users/peteraltamura/Desktop/data.csv')
+    registry.to_csv('/Users/peteraltamura/Desktop/registry.csv')
+    data = pd.merge(
+        data,
+        registry,
+        how='left',
+        left_on=['starterFirstName', 'starterLastName', 'team'],
+        right_on=['first_name', 'last_name', 'team'],
+        validate='1:1'
+    )
+    return data
+
+
 def extract_probables(data):
     """
     Extracts probable home and away pitchers from atv_preview.xml
@@ -95,12 +131,78 @@ def scrape_game_previews(date):
         probable_starters = pd.DataFrame()
         pass
 
+    # Filter to Games with two probable starters
+    probable_starters = probable_starters.loc[
+        probable_starters['probableStarterName'].notnull(), :]
+    psvc = probable_starters['gameId'].value_counts()
+    psvc = pd.DataFrame(psvc).reset_index(inplace=False)
+    psvc.columns = ['gameId', 'freq']
+    psvc = psvc.loc[psvc['freq'] == 2, :]
+    games = list(set(psvc['gameId']))
+    probable_starters = probable_starters.loc[probable_starters['gameId'].isin(games), :]
+    
+    # Add Format Pitcher Name
+    # First Name - assign out
+    probable_starters['starterFirstName'] =\
+        probable_starters['probableStarterName'].apply(
+            lambda s: s.split(" ")[0]
+        )
+    # Format
+    probable_starters.loc[:, 'starterFirstName'] = \
+        probable_starters['starterFirstName'].apply(
+            lambda x: x.lower()
+        )
+    # Last Name - assign out
+    probable_starters['starterLastName'] = \
+        probable_starters['probableStarterName'].apply(
+            lambda s: s.split(" ")[1]
+        )
+    # Format
+    probable_starters.loc[:, 'starterLastName'] = \
+        probable_starters['starterLastName'].apply(
+            lambda x: x.lower()
+        )
+    # Strip both
+    for x in ['starterFirstName', 'starterLastName']:
+        probable_starters.loc[:, x] = probable_starters[x].str.strip()
+
+    # Add Home Team / Away Team
+    probable_starters.loc[:, 'probableStarterSide'] = \
+        probable_starters['probableStarterSide'].apply(
+            lambda x: x.strip().lower()
+        )
+    probable_starters['homeTeam'] = probable_starters['gameId'].apply(
+        lambda x: x.split("_")[5]
+    )
+    probable_starters['awayTeam'] = probable_starters['gameId'].apply(
+        lambda x: x.split("_")[4]
+    )
+    probable_starters.reset_index(drop=True, inplace=True)
+    probable_starters.loc[
+        probable_starters['probableStarterSide'] == 'home',
+        'team'] = probable_starters['homeTeam'].str[:3]
+    probable_starters.loc[
+        probable_starters['probableStarterSide'] == 'away',
+        'team'] = probable_starters['awayTeam'].str[:3]
+                          
+    # Add Pitcher ID From team register
+    probable_starters = add_pitcher_ids(probable_starters)
+    probable_starters.rename(
+        columns={
+            'id': 'startingPitcherId',
+            'team': 'startingPitcherTeam',
+            'dob': 'startingPitcherDob',
+            'throws': 'startingPitcherThrows',
+            'weight': 'startingPitcherWeight'
+        },
+        inplace=True
+    )
+    
+    # Write out
     outpath = base_dest + "{}/".format(date_url.replace("/", ""))
     print(base_dest)
     if not os.path.exists(outpath):
         os.makedirs(outpath)
-    print(outpath)
-
     probable_starters.to_csv(
         outpath + "probableStarters.csv",
         index=False
@@ -108,21 +210,25 @@ def scrape_game_previews(date):
     probable_starters.to_parquet(
         outpath + 'probableStarters.parquet'
     )
-    
+
 
 if __name__ == "__main__":
 
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2019, month=6, day=29)
+    date = dt.datetime(year=2019, month=6, day=30)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
     base_dest = "/Volumes/Transcend/00_gameday/"
+    ref_dest = "/Volumes/Transcend/99_reference/"
+
+    # Misc
+    registry_hist = 10
 
     # Iterate over today and tomorrow
-    dates = [date, date+dt.timedelta(days=1)]
+    dates = [date]
     for dd in dates:
         print("Getting Probable Starters From: {}".format(str(dd)))
         scrape_game_previews(dd)

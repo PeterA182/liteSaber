@@ -9,8 +9,74 @@ CONFIG = util.load_config()
 
 """
 
-
 """
+
+
+def get_starters():
+    """
+    """
+
+    # Read in
+    # Get all paths for year
+    innings_paths = [
+        CONFIG.get('paths').get('normalized') + date_str + "/innings.parquet"
+        for date_str in os.listdir(CONFIG.get('paths').get('normalized'))
+    ]
+    inning_paths = [x for x in innings_paths if os.path.isfile(x)]
+
+    # Process and append batting paths
+    df = pd.concat(
+            objs=[pd.read_parquet(i_path) for i_path in inning_paths],
+            axis=0
+    )
+
+    # Add Date
+    df.loc[:, 'gameDate'] = pd.to_datetime(
+            df['gameDate'], infer_datetime_format=True
+    )
+
+    # cols
+    cols = ['home_starting_pitcher', 'away_starting_pitcher']
+    df = df.loc[:, ['gameId'] + cols].drop_duplicates(inplace=False)
+    print("Starting Pitchers table shape")
+    print(df.shape)
+    return df
+
+
+def add_starter_details(data):
+    """
+    """
+
+    last_registries = [
+        fname for fname in sorted(os.listdir(ref_dest))[-50:]
+    ]
+    registry = pd.concat(
+        objs=[
+            pd.read_parquet(ref_dest + fname) for fname in last_registries
+        ],
+        axis=0
+    )
+    for col in ['first_name', 'last_name']:
+        registry.loc[:, col] = registry[col].astype(str)
+        registry.loc[:, col] = \
+            registry[col].apply(lambda x: x.lower().strip())
+    registry.to_csv('/Users/peteraltamura/Desktop/registry_all.csv')
+    registry.reset_index(drop=True, inplace=True)
+    registry.drop_duplicates(
+        subset=['first_name', 'last_name', 'team'],
+        inplace=True
+    )
+
+    # Merge
+    data = pd.merge(
+        data,
+        registry,
+        how='left',
+        left_on=['startingPitcherId'],
+        right_on=['id'],
+        validate='1:1',
+    )
+    return data
 
 
 def get_matchup_base_table(year):
@@ -32,60 +98,7 @@ def get_matchup_base_table(year):
         ],
         axis=0
     )
-    return df_base
-
-
-def add_matchup_features(data):
-    """
-    Convert raw dimensions from linescore base table into 
-    proper features and return
-    WIN / LOSS 
-    """
-
-    # Time of Day - Home / Away
-    # Away AM PM Flag
-    msk = (data['away_ampm'].str.lower().strip() == 'pm')
-    data['away_is_pm'] = msk.astype(float)
-    data.drop(labels=['away_ampm'], axis=1, inplace=True)
-
-    # Home AM PM Flag
-    msk = (data['home_ampm'].str.lower().strip() == 'pm')
-    data['home_is_pm'] = msk.astype(float)
-    data.drop(labels=['home_ampm'], axis=1, inplace=True)
-
-    # Away Division
-    msk = (data['away_division'].str.lower().strip() == 'w')
-    data['away_div_is_west'] = msk.astype(float)
-    msk = (data['away_division'].str.lower().strip() == 'e')
-    data['away_div_is_east'] = msk.astype(float)
-    msk = (data['away_division'].str.lower().strip() == 'c')
-    data['away_div_is_central'] = msk.astype(float)
-    data.drop(labels=['away_division'], axis=1, inplace=True)
-
-    # Home Division
-    msk = (data['home_division'].str.lower().strip() == 'w')
-    data['home_div_is_west'] = msk.astype(float)
-    msk = (data['home_division'].str.lower().strip() == 'e')
-    data['home_div_is_east'] = msk.astype(float)
-    msk = (data['home_division'].str.lower().strip() == 'c')
-    data['home_div_is_central'] = msk.astype(float)
-    data.drop(labels=['home_division'], axis=1, inplace=True)
-
-    # Away Win / Loss Pct Season to Date
-    data.loc['away_win_loss_pct_sntd'] = (
-        data['away_win'] / (
-            data['away_win'] + data['away_loss']
-        )
-    )
-    data.drop(labels=['away_win', 'away_loss'], axis=1, inplace=True)
-    data.loc['home_win_loss_pct_sntd'] = (
-        data['home_win'] / (
-            data['home_win'] + data['home_loss']
-        )
-    )
-    data.drop(labels=['home_win', 'home_loss'], axis=1, inplace=True)
-
-    
+    return df_base    
     
     
     
@@ -97,7 +110,7 @@ if __name__ == "__main__":
     
     # ----------  ----------  ----------
     # Parameters
-    year = '2018'
+    year = '2019'
     bullpen_top_pitcher_count = 6
     pitcher_metrics = [
         'BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
@@ -115,7 +128,24 @@ if __name__ == "__main__":
     # ----------  ----------  ----------
     # Read in Line Score to get basis for each game played
     df_matchup_base = get_matchup_base_table(year)
-    df_matchup_base.to_csv(outpath+"df_matchup_base.csv", index=False)
 
-    df_matchup_base = add_matchup_features(df_matchup_base)
+    # Narrow to immediate dimensions
+    starter_table = get_starters()
+    starter_table = starter_table.loc[:, [
+        'gameId', 'home_starting_pitcher', 'away_starting_pitcher'
+    ]]
+    df_matchup_base = pd.merge(
+        df_matchup_base,
+        starter_table,
+        how='left',
+        on='gameId',
+        validate='1:1'
+    )
+    print(df_matchup_base.columns)
+
+    # Construct(ed) game-level | away | home
+    df_matchup_base = df_matchup_base.loc[:, [
+        'gameId', 'away_starting_pitcher', 'home_starting_pitcher'
+    ]]
+    df_matchup_base.to_csv('/Users/peteraltamura/Desktop/df_matchup_base_hist.csv', index=False)
     

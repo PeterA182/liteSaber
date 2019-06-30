@@ -102,7 +102,7 @@ def scrape_game_date(date):
     
     # Generate list of gid links
     test_resp = urllib.request.urlopen(full_url)
-    req = BeautifulSoup(test_resp)
+    req = BeautifulSoup(test_resp, "html.parser")
     game_links = [x for x in req.find_all('a') if
                   str(x.get('href'))[7:10] == 'gid']
 
@@ -113,6 +113,7 @@ def scrape_game_date(date):
     batting = []
     pitching = []
     innings = []
+    pitcher_registers = []
     for gid in game_links:
         print("        {}".format(str(gid)))
         try:
@@ -135,7 +136,9 @@ def scrape_game_date(date):
             )
             df_box['game_id'] = game_id
             date_games.extend([df_box])
-
+        except:
+            raise
+        try:
             # ------------------------------
             # Batting Details
             df_bat = data_master['batting']
@@ -160,7 +163,9 @@ def scrape_game_date(date):
                 )
                 team_batting['game_id'] = game_id
                 batting.append(team_batting)
-            
+        except:
+            raise
+        try:
             # ------------------------------
             # Pitching Details
             df_ptch = data_master['pitching']
@@ -186,7 +191,9 @@ def scrape_game_date(date):
                 )
                 team_pitching['game_id'] = game_id
                 pitching.append(team_pitching)
-
+        except:
+            raise
+        try:
             # ------------------------------
             # Inning Details
             rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
@@ -194,10 +201,34 @@ def scrape_game_date(date):
             innings_ret['game_id'] = game_id
             innings_ret['gameId'] = game_id
             innings.append(innings_ret)
-
-        except Exception as E:
-            print(E)
-            pass
+        except:
+            raise
+        try:
+            # ------------------------------
+            # Pitcher Register
+            rbs = full_url + "/" + str(gid.get('href'))[7:] + \
+                "pitchers/"
+            resp = urllib.request.urlopen(rbs)
+            respBS = BeautifulSoup(resp, "html.parser")
+            pitcher_links = [x.get('href') for x in respBS.find_all('a') if
+                        x.get('href')[-4:] == ".xml" and
+                        len(str(x.get('href'))) == 10]
+            curr_pitchers = []
+            for pitcher_link in pitcher_links:
+                df_parsed = ETREE.parse(urllib.request.urlopen(rbs+pitcher_link))
+                root = df_parsed.getroot()
+                df_pitcher = pd.DataFrame({
+                    x: [root.get(x)] for x in [
+                        'team', 'id', 'pos', 'type', 'first_name', 'last_name', 'jersey_number',
+                        'height', 'weight', 'bats', 'throws', 'dob'
+                    ]
+                })
+                curr_pitchers.append(df_pitcher)
+            
+            curr_pitchers = pd.concat(curr_pitchers, axis=0)
+            pitcher_registers.append(curr_pitchers)
+        except:
+            raise
 
     if not os.path.exists(base_dest + '{}/'.format(date_url.replace("/", ""))):
         os.makedirs(base_dest + '{}/'.format(date_url.replace("/", "")))
@@ -213,7 +244,6 @@ def scrape_game_date(date):
         date_games.to_parquet(base_dest + '{}/boxscore.parquet'.format(date_url.replace("/", "")))
 
         # Batting
-        
         batting = pd.concat(batting, axis=0)
         batting.to_csv(base_dest + '{}/batting.csv'.format(date_url.replace("/", "")),
                        index=False)
@@ -230,7 +260,10 @@ def scrape_game_date(date):
         innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
                        index=False)
         innings.to_parquet(base_dest + '{}/innings.parquet'.format(date_url.replace("/", "")))
-        print(base_dest + "{}/innings.parquet".format(date_url.replace("/", "")))
+
+        # Pitchers
+        pitchers = pd.concat(pitcher_registers, axis=0)
+        pitchers.to_parquet(ref_dest + "{}_pitcher_directory.parquet".format(date_url.replace("/", "")))
         
     except ValueError as VE:
         print("     no games on day")
@@ -248,13 +281,14 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=6, day=20)
-    max_date = dt.datetime(year=2019, month=6, day=29)
+    min_date = dt.datetime(year=2019, month=6, day=10)
+    max_date = dt.datetime(year=2019, month=6, day=20)
 
     # Teams
     teams = []
     base_url = "http://gd2.mlb.com/components/game/mlb/"
     base_dest = "/Volumes/Transcend/00_gameday/"
+    ref_dest = "/Volumes/Transcend/99_reference/"
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
