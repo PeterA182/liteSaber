@@ -74,16 +74,6 @@ def unpack_innings(game_tree):
     return finished
 
 
-def unpack_events(table):
-    """
-
-    :param table:
-    :return:
-    """
-
-    return 0
-
-
 def scrape_game_date(date):
     """
 
@@ -281,8 +271,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=6, day=10)
-    max_date = dt.datetime(year=2019, month=6, day=20)
+    min_date = dt.datetime(year=2019, month=4, day=13)
+    max_date = dt.datetime(year=2019, month=4, day=13)
 
     # Teams
     teams = []
@@ -291,7 +281,7 @@ if __name__ == "__main__":
     ref_dest = "/Volumes/Transcend/99_reference/"
 
     # Iterate over years
-    years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
+    #years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
     dates = [min_date+dt.timedelta(days=i)
              for i in range((max_date-min_date).days+1)]
 

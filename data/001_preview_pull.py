@@ -85,7 +85,6 @@ def extract_probables(data):
                             'probableStarterStat': [pitcher_prev_stat],
                             'probableStarterSide': [pitcher_prev_side]})
     df = pd.concat(objs=[df_home, df_away], axis=0)
-    print(df)
     return df
 
 
@@ -200,7 +199,6 @@ def scrape_game_previews(date):
     
     # Write out
     outpath = base_dest + "{}/".format(date_url.replace("/", ""))
-    print(base_dest)
     if not os.path.exists(outpath):
         os.makedirs(outpath)
     probable_starters.to_csv(
@@ -230,5 +228,4 @@ if __name__ == "__main__":
     # Iterate over today and tomorrow
     dates = [date]
     for dd in dates:
-        print("Getting Probable Starters From: {}".format(str(dd)))
         scrape_game_previews(dd)

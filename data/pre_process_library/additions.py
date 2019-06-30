@@ -12,6 +12,8 @@ def add_team(data, path, data_table_key):
     Parse team information from path and add to table
     
     """
+    if 'gameId' not in data.columns:
+        return data
 
     assert data_table_key in ['batter', 'pitcher', 'inning']
 
@@ -50,18 +52,18 @@ def add_game_date(data, path):
 
     # Add Game Date
     if 'gameId' not in data.columns:
-        print(data[[x for x in data.columns if 'game' in x]].head(10))
-        data['gameId'] = data['game_id'].copy(deep=True)
-
-    data.loc[:, 'gameDate'] = data['gameId'].str.split("_").apply(
-        lambda x: x[-6:-3]
+        return data
+    data['gameDate'] = data['gameId'].apply(
+        lambda x: x.split("_")
     )
-    data['gameDate'] = data['gameDate'].apply(
-        lambda x: dt.datetime(
-            year=int(x[0]),
-            month=int(x[1]),
-            day=int(x[2]))
-    )
+    try:
+        data['gameDate'] = data['gameDate'].apply(
+            lambda s: str(s[-6])+"_"+str(s[-5])+"_"+str(s[-4])
+        )
+    except:
+        return data
+    data['gameDate'] = pd.to_datetime(data['gameDate'], format="%Y_%m_%d")
+    data[['gameDate']].to_csv('/Users/peteraltamura/Desktop/gameDate.csv', index=False)
     return data
 
 
@@ -69,10 +71,14 @@ def add_starting_pitcher_flag(data):
     """
     """
 
+    # Return if not gameId
+    if 'gameId' not in data.columns:
+        return data
+    
     # Assure inning half
     if 'inning_half' not in data.columns:
         data = add_inning_half(data)
-
+    
     # Min atbat_num
     data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)
     df = data.loc[data['inning_num'].astype(float) == 1, :].groupby(
@@ -200,7 +206,8 @@ def add_inning_half(data):
     data.loc[:, 'inning_num'] = data['inning_num'].astype(float)
     data.loc[:, 'atbat_o'] = data['atbat_o'].astype(float)
     data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)
-
+    if 'gameId' not in data.columns:
+        return data
     # min atbat_num per inning
     min_atbat_num_per_inning = data.groupby(
         by=['game_id', 'inning_num'],

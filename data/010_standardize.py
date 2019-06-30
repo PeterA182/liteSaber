@@ -60,10 +60,17 @@ def process_date_innings(data, path, tablename='innings'):
 
     # Rename innings
     #data = names.rename_table(data, tablename='innings')
+    if all(y in path for y in ['2019', '04', '13']):
+        data.to_csv('/Users/peteraltamura/Desktop/process_innings_start.csv',
+                    index=False)
     data = add.add_game_date(data, path)
     data = add.add_inning_half(data)
     data = add.add_starting_pitcher_flag(data)
     data = add.add_team(data, path, 'inning')
+    if all(y in path for y in ['2019', '04', '13']):
+        data.to_csv('/Users/peteraltamura/Desktop/process_innings_end.csv',
+                    index=False)
+    
     return data
 
 
@@ -79,10 +86,9 @@ def process_date_games(path):
     returns:
         None
     """
-    path = path
 
     # Get Files
-    files_ = os.listdir(path)
+    #files_ = os.listdir(path)
 
     # Create desination dir
     if not os.path.exists(
@@ -94,12 +100,11 @@ def process_date_games(path):
     
     if not all(
             os.path.isfile(path+"{}.parquet".format(x))
-            for x in ['batting', 'pitching', 'boxscore', 'innings',
-                      'game_linescore_summary']
+            for x in ['batting', 'pitching', 'boxscore', 'innings']
     ):
         print("{} :: Passed".format(str(path)))
     else:
-    
+        print(path)
         # Process batting
         df = pd.read_parquet(path+"batting.parquet")
         df = process_date_batting(df, path)
@@ -153,30 +158,13 @@ def process_date_games(path):
             path.split("/")[-2] + "/" + \
             "starters.parquet"
         )
-
-        # Process Game Linescore Summary
-        df = pd.read_csv(path+"game_linescore_summary.csv", dtype=str)
-        for col in ['home_win', 'home_loss', 'away_win', 'away_loss']:
-            df.loc[:, col] = df[col].astype(float)
-        df.to_parquet(
-            CONFIG.get('paths').get('normalized') + \
-            path.split("/")[-2] + "/" + \
-            "game_linescore_summary.parquet"
-        )
-        if 'day_01' in path:
-            df.to_csv(
-                CONFIG.get('paths').get('normalized') + \
-                path.split("/")[-2] + "/" + \
-                "game_linescore_summary.csv",
-                index=False
-            )
     
 
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=3, day=31)
-    max_date = dt.datetime(year=2018, month=11, day=30)
+    min_date = dt.datetime(year=2019, month=3, day=25)
+    max_date = dt.datetime(year=2019, month=5, day=1)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
