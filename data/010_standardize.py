@@ -104,7 +104,12 @@ def process_date_games(path):
     ):
         print("{} :: Passed".format(str(path)))
     else:
-        print(path)
+        print(
+            CONFIG.get('paths').get('normalized') + \
+            path.split("/")[-2] + "/" + \
+            "batting.parquet"
+        )
+
         # Process batting
         df = pd.read_parquet(path+"batting.parquet")
         df = process_date_batting(df, path)

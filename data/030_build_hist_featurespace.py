@@ -394,7 +394,7 @@ if __name__ == "__main__":
     # Add Previous Game IDs
     df_matchup_base = add_prev_game_ids(df_matchup_base, df_prev_game_ids)
     df_matchup_base = df_matchup_base.loc[(
-        (df_matchup_base['homePrevGameId'].notunll())
+        (df_matchup_base['homePrevGameId'].notnull())
         &
         (df_matchup_base['awayPrevGameId'].notnull())
         &
@@ -408,7 +408,9 @@ if __name__ == "__main__":
     )
     
     # ----------  ----------  ----------
-    
+    # # # #
+    # WIN / LOSS TARGET
+    # # # #
 
     # ----------  ----------  ----------
     # Add Home starter trailing stats

@@ -277,27 +277,9 @@ def starter_details_indicators(data):
                 int(str(x).split("-")[1])
             ) if "-" in str(x) else int(x)
         )
-
-    # Age
-    #data['home_starting_pitcher_dob'] = \
-    #    pd.to_datetime(data['home_starting_pitcher_dob'])
-    #data['away_starting_pitcher_dob'] = \
-    #    pd.to_datetime(data['away_starting_pitcher_dob'])
-    #data.loc[:, 'home_starting_pitcher_age'] = (
-    #    data['gameDate'] - 
-    #    data['home_starting_pitcher_dob']
-    #).dt.days / 365
-    #data.loc[:, 'away_starting_pitcher_age'] = (
-    #    data['gameDate'] -
-    #    data['away_starting_pitcher_dob']
-    #).dt.days / 365
-    #data.drop(
-    #    labels=['home_starting_pitcher_dob',
-    #            'away_starting_pitcher_dob'],
-    #    axis=1,
-    #    inplace=True)
               
     return data
+
 
 
 if __name__ == "__main__":
@@ -327,6 +309,9 @@ if __name__ == "__main__":
     # Get Historic Boxscores
     df_box_hist = get_hist_boxscores(str(date.year))
     df_prev_game_ids = get_prev_game_id(df_box_hist, date)
+    # Win Loss by Disposition
+    home_team_win_pct_home, \
+        away_team_win_pct_away = win_loss_by_disposition(str(date.year))
     
     # ---------- ---------- ----------
     # Get Basic Matchup Table
@@ -401,6 +386,10 @@ if __name__ == "__main__":
         index=False
     )
 
+    # ----------  ----------  ----------
+    # # # #
+    # THIS IS WHERE WIN / LOSS WOULD BE ADDED -- TARGET
+    # # # #
     
 
     # ----------  ----------  ----------

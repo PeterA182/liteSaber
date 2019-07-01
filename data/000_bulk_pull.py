@@ -104,124 +104,156 @@ def scrape_game_date(date):
     pitching = []
     innings = []
     pitcher_registers = []
+    linescores = []
     for gid in game_links:
         print("        {}".format(str(gid)))
-        try:
-            game_id = str(gid.get('href'))[7:]
-            rbs = full_url + "/" + str(gid.get('href'))[7:] + "boxscore.json"
-            data_master = urllib.request.urlopen(rbs)
-            data_master = pd.read_json(data_master)
-            data_master = data_master['data'].iloc[0]
+        game_id = str(gid.get('href'))[7:]
+        if run_boxscore:
+            try:
+                game_id = str(gid.get('href'))[7:]
+                rbs = full_url + "/" + str(gid.get('href'))[7:] + "boxscore.json"
+                data_master = urllib.request.urlopen(rbs)
+                data_master = pd.read_json(data_master)
+                data_master = data_master['data'].iloc[0]
 
-            # ------------------------------
-            # ------------------------------
-            #
-            # Boxscore (data_master is a dictionary)
-            df_box = pd.DataFrame({'gameId': [game_id]})
-            df_box = pd.concat(
-                objs=[df_box,
-                      pd.DataFrame({k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
-                                    for k, v in data_master.items() if k not in ignore_keys})],
-                axis=1
-            )
-            df_box['game_id'] = game_id
-            date_games.extend([df_box])
-        except:
-            pass
-        try:
-            # ------------------------------
-            # Batting Details
-            df_bat = data_master['batting']
-            for team in df_bat:
-                team_batting = pd.DataFrame({
-                    "team_{}".format(k): [v for i in range(len(team['batter']))]
-                    for k, v in team.items() if k not in [
-                        'batter', 'text_data', 'text_data_es',
+                # ------------------------------
+                # ------------------------------
+                #
+                # Boxscore (data_master is a dictionary)
+                df_box = pd.DataFrame({'gameId': [game_id]})
+                df_box = pd.concat(
+                    objs=[df_box,
+                          pd.DataFrame({k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
+                                        for k, v in data_master.items() if k not in ignore_keys})],
+                    axis=1
+                )
+                df_box['game_id'] = game_id
+                date_games.extend([df_box])
+            except:
+                pass
+        if run_batting:
+            try:
+                # ------------------------------
+                # Batting Details
+                df_bat = data_master['batting']
+                for team in df_bat:
+                    team_batting = pd.DataFrame({
+                        "team_{}".format(k): [v for i in range(len(team['batter']))]
+                        for k, v in team.items() if k not in [
+                            'batter', 'text_data', 'text_data_es',
+                            'note', 'note_es'
+                        ]
+                    })
+                    batters = pd.concat(
+                        objs=[pd.DataFrame({k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
+                                            for k, v in batter.items()})
+                              for batter in team['batter']],
+                        axis=0,
+                        ignore_index=True
+                    )
+                    team_batting = pd.concat(
+                        objs=[team_batting, batters],
+                        axis=1
+                    )
+                    team_batting['game_id'] = game_id
+                    batting.append(team_batting)
+            except:
+                pass
+        if run_pitching:
+            try:
+                # ------------------------------
+                # Pitching Details
+                df_ptch = data_master['pitching']
+                for team in df_ptch:
+                    team_pitching = pd.DataFrame({
+                        "team_{}".format(k): [v for i in range(len(team['pitcher']))]
+                        for k, v in team.items() if k not in [
+                        'pitcher', 'text_data', 'text_data_es',
                         'note', 'note_es'
                     ]
-                })
-                batters = pd.concat(
-                    objs=[pd.DataFrame({k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
-                                        for k, v in batter.items()})
-                          for batter in team['batter']],
-                    axis=0,
-                    ignore_index=True
-                )
-                team_batting = pd.concat(
-                    objs=[team_batting, batters],
-                    axis=1
-                )
-                team_batting['game_id'] = game_id
-                batting.append(team_batting)
-        except:
-            pass
-        try:
-            # ------------------------------
-            # Pitching Details
-            df_ptch = data_master['pitching']
-            for team in df_ptch:
-                team_pitching = pd.DataFrame({
-                    "team_{}".format(k): [v for i in range(len(team['pitcher']))]
-                    for k, v in team.items() if k not in [
-                    'pitcher', 'text_data', 'text_data_es',
-                    'note', 'note_es'
-                ]
-                })
-                pitchers = pd.concat(
-                    objs=[pd.DataFrame(
-                        {k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
-                         for k, v in batter.items()})
-                          for batter in team['pitcher']],
-                    axis=0,
-                    ignore_index=True
-                )
-                team_pitching = pd.concat(
-                    objs=[team_pitching, pitchers],
-                    axis=1
-                )
-                team_pitching['game_id'] = game_id
-                pitching.append(team_pitching)
-        except:
-            pass
-        try:
-            # ------------------------------
-            # Inning Details
-            rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
-            innings_ret = unpack_innings(ETREE.parse(urllib.request.urlopen(rbs)))
-            innings_ret['game_id'] = game_id
-            innings_ret['gameId'] = game_id
-            innings.append(innings_ret)
-        except:
-            pass
-        """
-        try:
-            # ------------------------------
-            # Pitcher Register
-            rbs = full_url + "/" + str(gid.get('href'))[7:] + \
-                "pitchers/"
-            resp = urllib.request.urlopen(rbs)
-            respBS = BeautifulSoup(resp, "html.parser")
-            pitcher_links = [x.get('href') for x in respBS.find_all('a') if
-                        x.get('href')[-4:] == ".xml" and
-                        len(str(x.get('href'))) == 10]
-            curr_pitchers = []
-            for pitcher_link in pitcher_links:
-                df_parsed = ETREE.parse(urllib.request.urlopen(rbs+pitcher_link))
-                root = df_parsed.getroot()
-                df_pitcher = pd.DataFrame({
-                    x: [root.get(x)] for x in [
-                        'team', 'id', 'pos', 'type', 'first_name', 'last_name', 'jersey_number',
-                        'height', 'weight', 'bats', 'throws', 'dob'
-                    ]
-                })
-                curr_pitchers.append(df_pitcher)
-            
-            curr_pitchers = pd.concat(curr_pitchers, axis=0)
-            pitcher_registers.append(curr_pitchers)
-        except:
-            raise
-        """
+                    })
+                    pitchers = pd.concat(
+                        objs=[pd.DataFrame(
+                            {k: [''.join([i if ord(i) < 128 else ' ' for i in v])]
+                             for k, v in batter.items()})
+                              for batter in team['pitcher']],
+                        axis=0,
+                        ignore_index=True
+                    )
+                    team_pitching = pd.concat(
+                        objs=[team_pitching, pitchers],
+                        axis=1
+                    )
+                    team_pitching['game_id'] = game_id
+                    pitching.append(team_pitching)
+            except:
+                pass
+        if run_innings:
+            try:
+                # ------------------------------
+                # Inning Details
+                rbs = full_url + "/" + str(gid.get('href'))[7:] + "inning/inning_all.xml"
+                innings_ret = unpack_innings(ETREE.parse(urllib.request.urlopen(rbs)))
+                innings_ret['game_id'] = game_id
+                innings_ret['gameId'] = game_id
+                innings.append(innings_ret)
+            except:
+                pass
+        if run_pitchers:
+            try:
+                # ------------------------------
+                # Pitcher Register
+                rbs = full_url + "/" + str(gid.get('href'))[7:] + \
+                    "pitchers/"
+                resp = urllib.request.urlopen(rbs)
+                respBS = BeautifulSoup(resp, "html.parser")
+                pitcher_links = [x.get('href') for x in respBS.find_all('a') if
+                            x.get('href')[-4:] == ".xml" and
+                            len(str(x.get('href'))) == 10]
+                curr_pitchers = []
+                for pitcher_link in pitcher_links:
+                    df_parsed = ETREE.parse(urllib.request.urlopen(rbs+pitcher_link))
+                    root = df_parsed.getroot()
+                    df_pitcher = pd.DataFrame({
+                        x: [root.get(x)] for x in [
+                            'team', 'id', 'pos', 'type', 'first_name', 'last_name', 'jersey_number',
+                            'height', 'weight', 'bats', 'throws', 'dob'
+                        ]
+                    })
+                    curr_pitchers.append(df_pitcher)
 
+                curr_pitchers = pd.concat(curr_pitchers, axis=0)
+                pitcher_registers.append(curr_pitchers)
+            except:
+                pass
+        if run_linescores:
+            try:
+                # ----------------------------
+                # Get LineScores
+                rbs = full_url + "/" + str(gid.get('href'))[7:] + "linescore.json"
+                
+                data_master = urllib.request.urlopen(rbs)
+                data_master = pd.read_json(data_master)
+                data_master = data_master['data']['game']
+                
+                # ------------------------------
+                # ------------------------------
+                #
+                # Boxscore (data_master is a dictionary)
+                df_line = pd.DataFrame({'gameId': [game_id]})
+                new = pd.DataFrame({
+                    k: [str(data_master[k])] for
+                    k in list(data_master.keys())
+                })
+                df_line = pd.concat(
+                    objs=[df_line, new],
+                    axis=1
+                )
+                df_line['gameId'] = game_id
+                linescores.append(df_line)
+            except:
+                pass
+                
     if not os.path.exists(base_dest + '{}/'.format(date_url.replace("/", ""))):
         os.makedirs(base_dest + '{}/'.format(date_url.replace("/", "")))
 
@@ -260,10 +292,23 @@ def scrape_game_date(date):
         innings.to_parquet(base_dest + '{}/innings.parquet'.format(date_url.replace("/", "")))
     except:
         pass
+    try:
         # Pitchers
-        #pitchers = pd.concat(pitcher_registers, axis=0)
-        #pitchers.to_parquet(ref_dest + "{}_pitcher_directory.parquet".format(date_url.replace("/", "")))
-
+        pitchers = pd.concat(pitcher_registers, axis=0)
+        pitchers.to_parquet(ref_dest + "{}_pitcher_directory.parquet".format(date_url.replace("/", "")))
+    except:
+        pass
+    try:
+        # Linescores
+        linescores = pd.concat(linescores, axis=0)
+        print(linescores.shape)
+        print(base_dest + "{}/linescores.parquet".format(date_url.replace("/", "")))
+        linescores.to_csv(base_dest + "{}/linescores.parquet".format(date_url.replace("/", "")),
+                          index=False)
+        linescores.to_parquet(base_dest + "{}/linescores.parquet".format(date_url.replace("/", "")))
+    except:
+        pass
+            
     return 0
 
     #
@@ -277,8 +322,16 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=3, day=28)
+    min_date = dt.datetime(year=2019, month=3, day=20)
     max_date = dt.datetime(year=2019, month=6, day=29)
+
+    # Run For
+    run_boxscore = False
+    run_batting = False
+    run_pitching = False
+    run_innings = False
+    run_pitchers = False
+    run_linescores = True
 
     # Teams
     teams = []
