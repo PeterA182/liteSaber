@@ -127,7 +127,7 @@ def scrape_game_date(date):
             df_box['game_id'] = game_id
             date_games.extend([df_box])
         except:
-            raise
+            pass
         try:
             # ------------------------------
             # Batting Details
@@ -154,7 +154,7 @@ def scrape_game_date(date):
                 team_batting['game_id'] = game_id
                 batting.append(team_batting)
         except:
-            raise
+            pass
         try:
             # ------------------------------
             # Pitching Details
@@ -182,7 +182,7 @@ def scrape_game_date(date):
                 team_pitching['game_id'] = game_id
                 pitching.append(team_pitching)
         except:
-            raise
+            pass
         try:
             # ------------------------------
             # Inning Details
@@ -192,7 +192,8 @@ def scrape_game_date(date):
             innings_ret['gameId'] = game_id
             innings.append(innings_ret)
         except:
-            raise
+            pass
+        """
         try:
             # ------------------------------
             # Pitcher Register
@@ -219,6 +220,7 @@ def scrape_game_date(date):
             pitcher_registers.append(curr_pitchers)
         except:
             raise
+        """
 
     if not os.path.exists(base_dest + '{}/'.format(date_url.replace("/", ""))):
         os.makedirs(base_dest + '{}/'.format(date_url.replace("/", "")))
@@ -232,31 +234,35 @@ def scrape_game_date(date):
         date_games.to_csv(base_dest + '{}/boxscore.csv'.format(date_url.replace("/", "")),
                           index=False)
         date_games.to_parquet(base_dest + '{}/boxscore.parquet'.format(date_url.replace("/", "")))
-
+    except:
+        pass
+    try:
         # Batting
         batting = pd.concat(batting, axis=0)
         batting.to_csv(base_dest + '{}/batting.csv'.format(date_url.replace("/", "")),
                        index=False)
         batting.to_parquet(base_dest + '{}/batting.parquet'.format(date_url.replace("/", "")))
-
+    except:
+        pass
+    try:
         # Pitching
         pitching = pd.concat(pitching, axis=0)
         pitching.to_csv(base_dest + '{}/pitching.csv'.format(date_url.replace("/", "")),
                         index=False)
         pitching.to_parquet(base_dest + '{}/pitching.parquet'.format(date_url.replace("/", "")))
-
+    except:
+        pass
+    try:
         # Innings
         innings = pd.concat(innings, axis=0)
         innings.to_csv(base_dest + '{}/innings.csv'.format(date_url.replace("/", "")),
                        index=False)
         innings.to_parquet(base_dest + '{}/innings.parquet'.format(date_url.replace("/", "")))
-
+    except:
+        pass
         # Pitchers
-        pitchers = pd.concat(pitcher_registers, axis=0)
-        pitchers.to_parquet(ref_dest + "{}_pitcher_directory.parquet".format(date_url.replace("/", "")))
-        
-    except ValueError as VE:
-        print("     no games on day")
+        #pitchers = pd.concat(pitcher_registers, axis=0)
+        #pitchers.to_parquet(ref_dest + "{}_pitcher_directory.parquet".format(date_url.replace("/", "")))
 
     return 0
 
@@ -271,8 +277,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=4, day=13)
-    max_date = dt.datetime(year=2019, month=4, day=13)
+    min_date = dt.datetime(year=2019, month=3, day=28)
+    max_date = dt.datetime(year=2019, month=6, day=29)
 
     # Teams
     teams = []

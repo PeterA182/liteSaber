@@ -21,17 +21,19 @@ if __name__ == "__main__":
     for yr in years:
 
         # Get all paths for year
-        bat_paths = [
+        ptch_paths = [
             CONFIG.get('paths').get('normalized') + date_str + "/pitching.parquet"
             for date_str in os.listdir(CONFIG.get('paths').get('normalized'))
         ]
-        bat_paths = [x for x in bat_paths if os.path.isfile(x)]
+        ptch_paths = [x for x in ptch_paths if os.path.isfile(x)]
 
         # Process and append batting paths
         df = pd.concat(
-            objs=[pd.read_parquet(yr_batting_path) for yr_batting_path in bat_paths],
+            objs=[pd.read_parquet(yr_pitching_path) for yr_pitching_path in ptch_paths],
             axis=0
         )
+        df.to_csv('/Users/peteraltamura/Desktop/example.csv', index=False)
+        sldifjls
 
         # Add Date
         df.loc[:, 'gameDate'] = pd.to_datetime(

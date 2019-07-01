@@ -197,8 +197,8 @@ if __name__ == "__main__":
     
     # -----------
     # Years
-    min_year = 2018
-    max_year = 2018
+    min_year = 2019
+    max_year = 2019
     if min_year == max_year:
         years = [min_year]
     else:
@@ -212,6 +212,7 @@ if __name__ == "__main__":
         bat_paths = [
             CONFIG.get('paths').get('normalized') + date_str + "/batting.parquet"
             for date_str in os.listdir(CONFIG.get('paths').get('normalized'))
+            if str(yr) in date_str
         ]
         bat_paths = [x for x in bat_paths if os.path.isfile(x)]
 
@@ -219,6 +220,16 @@ if __name__ == "__main__":
         df = pd.concat(
             objs=[pd.read_parquet(yr_batting_path) for yr_batting_path in bat_paths],
             axis=0
+        )
+        df.loc[:, 'gameDate'] = df['gameId'].apply(lambda x: x.split("_"))
+        df = df.loc[df['gameDate'].apply(lambda x: str(x[1])) == str(yr), :]
+        df.to_csv('/Users/peteraltamura/Desktop/dates.csv')
+        df.loc[:, 'gameDate'] = df['gameDate'].apply(
+            lambda x: dt.datetime(
+                year=int(str(x[1])),
+                month=int(str(x[2])),
+                day=int(str(x[3]))
+            )
         )
 
         # Add Date
@@ -228,11 +239,13 @@ if __name__ == "__main__":
 
         # Establish base table
         df_master = df.loc[:, [
-            'gameId', 'gameDate', 'batterId', 'batterTeamFlag'
+            'gameId', 'gameDate', 'batterId'
         ]].drop_duplicates(inplace=False)
         
         # Add Walk Percentage
         walk_pct = walk_percentage_metric(df, trails)
+        walk_pct.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                                 inplace=True)
         df_master = pd.merge(
             df_master,
             walk_pct,
@@ -243,6 +256,8 @@ if __name__ == "__main__":
 
         # Add K Pct
         k_pct = k_percentage_metric(df, trails)
+        k_pct.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                                 inplace=True)
         df_master = pd.merge(
             df_master,
             k_pct,
@@ -253,6 +268,8 @@ if __name__ == "__main__":
         
         # ISO
         iso = iso_metric(df, trails)
+        iso.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                                 inplace=True)
         df_master = pd.merge(
             df_master,
             iso,
@@ -263,6 +280,8 @@ if __name__ == "__main__":
 
         # BABIP
         babip = babip_metric(df, trails)
+        babip.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                                 inplace=True)
         df_master = pd.merge(
             df_master,
             babip,
@@ -273,6 +292,8 @@ if __name__ == "__main__":
 
         # WOBA
         woba = woba_metric(df, trails)
+        woba.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                                 inplace=True)
         df_master = pd.merge(
             df_master,
             woba,
@@ -283,6 +304,8 @@ if __name__ == "__main__":
 
         # AtBat Trail Count (for sorting in featurespace)
         ab = pa_metric(df, trails)
+        ab.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+                           inplace=True)
         df_master = pd.merge(
             df_master,
             ab,

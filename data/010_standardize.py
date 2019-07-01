@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     # Run Log
     min_date = dt.datetime(year=2019, month=3, day=25)
-    max_date = dt.datetime(year=2019, month=5, day=1)
+    max_date = dt.datetime(year=2019, month=6, day=29)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -174,15 +174,9 @@ if __name__ == "__main__":
     # Estalish path
     dates = [CONFIG.get('paths').get('raw') +
              dd.strftime('year_%Ymonth_%mday_%d/') for dd in dates]
+    print(dates[:12])
     proc_ = mp.cpu_count()
     POOL = mp.Pool(proc_)
     r = POOL.map(process_date_games, dates)
     POOL.close()
     POOL.join()
-#    for dd in dates:
-#        path = CONFIG.get('paths').get('raw')
-#        dd = dd.strftime('year_%Ymonth_%mday_%d/')
-#        path += dd
-        
-#        print(dd)
-#        process_date_games(path)

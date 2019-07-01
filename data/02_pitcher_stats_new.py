@@ -166,8 +166,8 @@ if __name__ == "__main__":
     
     # -----------
     # Years
-    min_year = 2018
-    max_year = 2018
+    min_year = 2019
+    max_year = 2019
     if min_year == max_year:
         years = [min_year]
     else:
@@ -176,11 +176,13 @@ if __name__ == "__main__":
     # -----------
     # Iterate
     for yr in years:
+        print("Now Processing Year :: {}".format(str(yr)))
 
         # Get all paths for year
         bat_paths = [
             CONFIG.get('paths').get('normalized') + date_str + "/pitching.parquet"
             for date_str in os.listdir(CONFIG.get('paths').get('normalized'))
+            if str(yr) in date_str
         ]
         bat_paths = [x for x in bat_paths if os.path.isfile(x)]
 
@@ -189,7 +191,17 @@ if __name__ == "__main__":
             objs=[pd.read_parquet(yr_batting_path) for yr_batting_path in bat_paths],
             axis=0
         )
-
+        df.loc[:, 'gameDate'] = df['gameId'].apply(lambda x: x.split("_"))
+        df = df.loc[df['gameDate'].apply(lambda x: str(x[1])) == str(yr), :]
+        df.to_csv('/Users/peteraltamura/Desktop/dates.csv')
+        df.loc[:, 'gameDate'] = df['gameDate'].apply(
+            lambda x: dt.datetime(
+                year=int(str(x[1])),
+                month=int(str(x[2])),
+                day=int(str(x[3]))
+            )
+        )
+        
         # Add Date
         df.loc[:, 'gameDate'] = pd.to_datetime(
             df['gameDate'], infer_datetime_format=True
@@ -275,17 +287,26 @@ if __name__ == "__main__":
         # ------------------------------
         # Final
         for gid in list(pd.Series.unique(df_master.gameId)):
+            print(gid)
             dest_path = CONFIG.get('paths').get('pitcher_saber') + str(gid) + "/"
             if not os.path.exists(dest_path):
                 os.makedirs(dest_path)
-            df_master.loc[df_master['gameId'] == gid, :].to_parquet(
-                CONFIG.get('paths').get('pitcher_saber') + \
-                '{}pitcher_saber.parquet'.format(str(gid))
-            )
-            df_master.loc[df_master['gameId'] == gid, :].to_csv(
-                CONFIG.get('paths').get('pitcher_saber') + \
-                '{}pitcher_saber.csv'.format(str(gid)), index=False
-            )
+            curr_master = df_master.loc[df_master['gameId'] == gid, :]
+            try:
+                curr_master.to_csv(
+                    CONFIG.get('paths').get('pitcher_saber') + \
+                    '{}/pitcher_saber.csv'.format(str(gid)), index=False
+                )
+            except:
+                pass
+            try:
+                curr_master.to_parquet(
+                    CONFIG.get('paths').get('pitcher_saber') + \
+                    '{}/pitcher_saber.parquet'.format(str(gid))
+                )
+            except:
+                pass
+            
         
 
             
