@@ -285,24 +285,6 @@ def starter_details_indicators(data):
                 int(str(x).split("-")[1])
             ) if "-" in str(x) else int(x)
         )
-    
-    # Age
-    #print(data[['gameDate', 'home_starting_pitcher_dob',
-    #            'away_starting_pitcher_dob']].head())
-    #data.loc[:, 'home_starting_pitcher_age'] = (
-    #    data['gameDate'] - 
-    #    data['home_starting_pitcher_dob']
-    #).dt.days / 365
-    #data.loc[:, 'away_starting_pitcher_age'] = (
-    #    data['gameDate'] -
-    #    data['away_starting_pitcher_dob']
-    #).dt.days / 365
-    #data.drop(
-    #    labels=['home_starting_pitcher_dob',
-    #            'away_starting_pitcher_dob'],
-    #    axis=1,
-    #    inplace=True
-    #)
 
     return data
 
@@ -326,7 +308,40 @@ def add_date(data):
     assert all(data['gameDate'].notnull())
     return data
 
-    
+
+def add_target(data):
+    """
+    """
+
+    # Read in all hist line scores with current year in path
+    df_ls = pd.concat(
+        objs=[
+            pd.read_parquet(
+                CONFIG.get('paths').get('raw') + \
+                dd + "/" + "linescores.parquet"
+            ) for dd in os.listdir(
+                CONFIG.get('paths').get('raw')
+            ) if str(year) in dd and
+            os.path.isfile(CONFIG.get('paths').get('raw') + \
+                dd + "/" + "linescores.parquet"
+            )
+        ],
+        axis=0
+    )
+    df_ls = df_ls.loc[:, ['gameId', 'home_team_runs', 'away_team_runs']]
+    for col in ['home_team_runs', 'away_team_runs']:
+        df_ls.loc[:, col] = df_ls[col].astype(float)
+    df_ls['home_team_winner'] = (df_ls['home_team_runs'] >
+                                 df_ls['away_team_runs']).astype(int)
+    data = pd.merge(
+        data,
+        df_ls[['gameId', 'home_team_winner']],
+        how='left',
+        on=['gameId'],
+        validate='1:1'
+    )
+    return data
+
 
 if __name__ == "__main__":
 
@@ -402,16 +417,17 @@ if __name__ == "__main__":
         &
         (df_matchup_base['home_starting_pitcher'].notnull())
     ), :]
-    df_matchup_base.to_csv(
-        '/Users/peteraltamura/Desktop/df_matchup_base_hist_details.csv',
-        index=False
-    )
     
     # ----------  ----------  ----------
     # # # #
     # WIN / LOSS TARGET
     # # # #
-
+    df_matchup_base = add_target(df_matchup_base)
+    df_matchup_base.to_csv(
+        '/Users/peteraltamura/Desktop/df_matchup_base_hist_details.csv',
+        index=False
+    )
+    
     # ----------  ----------  ----------
     # Add Home starter trailing stats
     
