@@ -32,8 +32,6 @@ if __name__ == "__main__":
             objs=[pd.read_parquet(yr_pitching_path) for yr_pitching_path in ptch_paths],
             axis=0
         )
-        df.to_csv('/Users/peteraltamura/Desktop/example.csv', index=False)
-        sldifjls
 
         # Add Date
         df.loc[:, 'gameDate'] = pd.to_datetime(
