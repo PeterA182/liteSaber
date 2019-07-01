@@ -51,17 +51,12 @@ def add_game_date(data, path):
     """
 
     # Add Game Date
-    if 'gameId' not in data.columns:
-        return data
     data['gameDate'] = data['gameId'].apply(
         lambda x: x.split("_")
     )
-    try:
-        data['gameDate'] = data['gameDate'].apply(
-            lambda s: str(s[-6])+"_"+str(s[-5])+"_"+str(s[-4])
-        )
-    except:
-        return data
+    data['gameDate'] = data['gameDate'].apply(
+        lambda s: str(s[-6])+"_"+str(s[-5])+"_"+str(s[-4])
+    )
     data['gameDate'] = pd.to_datetime(data['gameDate'], format="%Y_%m_%d")
     data[['gameDate']].to_csv('/Users/peteraltamura/Desktop/gameDate.csv', index=False)
     return data
