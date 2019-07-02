@@ -343,6 +343,86 @@ def add_target(data):
     return data
 
 
+def add_starter_stats(data, years):
+    """
+    """
+
+    # Get full paths to all files
+    paths = [
+        CONFIG.get('paths').get('pitcher_saber')+gid+"/pitcher_saber.csv"
+        for gid in os.listdir(CONFIG.get('paths').get('pitcher_saber'))
+        if any(y in gid for y in years)
+    ]
+    # Concatenate all paths created
+    df_pitching = pd.concat(
+        objs=[pd.read_csv(fpath) for fpath in paths if fpath[-4:] == ".csv"],
+        axis=0
+    )
+    df_pitching.loc[:, 'pitcherId'] = df_pitching['pitcherId'].astype(str)
+    # Sort ascending pitcherId and date
+    df_pitching.sort_values(
+        by=['pitcherId', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    df_pitching.reset_index(drop=True, inplace=True)
+    df_pitching['rankItem'] = df_pitching.index
+    df_pitching['rank'] = \
+        df_pitching.groupby('pitcherId')['rankItem'].rank(
+            method='first',
+            ascending=False
+        )
+    # Get most recently available stats per pitcher
+    # Rank pitcherId appearances in data
+    data.sort_values(
+        by=['home_starting_pitcher_id', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    data.reset_index(drop=True, inplace=True)
+    data['rankItem'] = data.index
+    data['home_starting_pitcher_id_rank'] = \
+        data.groupby('home_starting_pitcher_id')['rankItem'].\
+        rank(method='first', ascending=False)
+    data.sort_values(
+        by=['away_starting_pitcher_id', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    data.reset_index(drop=True, inplace=True)
+    data['rankItem'] = data.index
+    data['away_starting_pitcher_id_rank'] = \
+        data.groupby('away_starting_pitcher_id')['rankItem'].\
+        rank(method='first', ascending=False)
+    # Decrease Perf Rank by 1
+    data['home_starting_pitcher_id_rank'] -= 1
+    data['away_starting_pitcher_id_rank'] -= 1
+
+    df_pitching = df_pitching.loc[df_pitching['pitcherId'] == "282332", :]
+    data = data.loc[data['away_starting_pitcher_id'] == "282332", :]
+
+    # Merge
+    data = pd.merge(
+        data,
+        df_pitching,
+        how='left',
+        left_on=['away_starting_pitcher_id_rank', 'away_starting_pitcher_id'],
+        right_on=['rank', 'pitcherId'],
+        validate='1:1',
+        suffixes=['', '_away']
+    )
+    data = pd.merge(
+        data,
+        df_pitching,
+        how='left',
+        left_on=['home_starting_pitcher_id_rank', 'home_starting_pitcher_id'],
+        right_on=['rank', 'pitcherId'],
+        validate='1:1',
+        suffixes=['', '_home']
+    )
+    return data
+
+
 if __name__ == "__main__":
 
     outpath = "/Users/peteraltamura/Desktop/"
@@ -369,18 +449,27 @@ if __name__ == "__main__":
     # ---------- ---------- ----------
     # Get Historic Boxscores
     df_box_hist = get_hist_boxscores(year)
+    df_box_hist.loc[df_box_hist['gameId'] == "gid_2019_04_13_chamlb_nyamlb_1/", :].to_csv(
+        '/Users/peteraltamura/Desktop/box_test.csv', index=False
+    )
     df_prev_game_ids = get_prev_game_id(df_box_hist)
 
     # ----------  ----------  ----------
     # Read in Line Score to get basis for each game played
     df_matchup_base = get_matchup_base_table(year)
     df_matchup_base = add_date(df_matchup_base)
+    df_matchup_base.loc[df_matchup_base['gameId'] == 'gid_2019_04_13_chamlb_nyamlb_1/', :].to_csv(
+        '/Users/peteraltamura/Desktop/matchup_test2.csv', index=False
+    )
     
     # Narrow to immediate dimensions
     starter_table = get_starters()
     starter_table = starter_table.loc[:, [
         'gameId', 'home_starting_pitcher', 'away_starting_pitcher'
     ]]
+    starter_table.to_csv('/Users/peteraltamura/Desktop/starter_table.csv',
+                         index=False)
+    sdlfkj
     df_matchup_base = pd.merge(
         df_matchup_base,
         starter_table,
@@ -427,7 +516,17 @@ if __name__ == "__main__":
         '/Users/peteraltamura/Desktop/df_matchup_base_hist_details.csv',
         index=False
     )
-    
+    df_matchup_base.rename(
+        columns={'home_starting_pitcher': 'home_starting_pitcher_id',
+                 'away_starting_pitcher': 'away_starting_pitcher_id'},
+        inplace=True
+    )
+
+    df_matchup_base = add_starter_stats(data=df_matchup_base, years=[year])
+    df_matchup_base.to_csv(
+        "/Users/peteraltamura/Desktop/df_matchup_base_hist_starter_details.csv",
+        index=False
+    )
     # ----------  ----------  ----------
     # Add Home starter trailing stats
     

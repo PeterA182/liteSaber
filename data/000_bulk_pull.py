@@ -322,15 +322,15 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2018, month=3, day=20)
-    max_date = dt.datetime(year=2018, month=11, day=29)
+    min_date = dt.datetime(year=2019, month=6, day=29)
+    max_date = dt.datetime(year=2019, month=6, day=30)
 
     # Run For
-    run_boxscore = False
-    run_batting = False
-    run_pitching = False
-    run_innings = False
-    run_pitchers = False
+    run_boxscore = True
+    run_batting = True
+    run_pitching = True
+    run_innings = True
+    run_pitchers = True
     run_linescores = True
 
     # Teams

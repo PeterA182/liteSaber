@@ -51,14 +51,20 @@ def add_game_date(data, path):
     """
 
     # Add Game Date
-    data['gameDate'] = data['gameId'].apply(
-        lambda x: x.split("_")
-    )
-    data['gameDate'] = data['gameDate'].apply(
-        lambda s: str(s[-6])+"_"+str(s[-5])+"_"+str(s[-4])
-    )
-    data['gameDate'] = pd.to_datetime(data['gameDate'], format="%Y_%m_%d")
-    data[['gameDate']].to_csv('/Users/peteraltamura/Desktop/gameDate.csv', index=False)
+    assert 'gameDate' not in data.columns
+    if 'gameId' not in data.columns:
+        print("********")
+        print(path)
+    try:
+        data['gameDate'] = data['gameId'].apply(
+            lambda x: x.split("_")
+        )
+        data['gameDate'] = data['gameDate'].apply(
+            lambda s: str(s[-6])+"_"+str(s[-5])+"_"+str(s[-4])
+        )
+        data['gameDate'] = pd.to_datetime(data['gameDate'], format="%Y_%m_%d")
+    except:
+        pass
     return data
 
 
@@ -98,19 +104,19 @@ def add_starting_pitcher_flag(data):
         (df['atbat_num'] == df['atbat_num_min'])
         &
         (df['inning_half'] == 'top')
-    ), 'away_starting_pitcher'] = df['atbat_pitcher']
+    ), 'home_starting_pitcher'] = df['atbat_pitcher']
     df.loc[(
         (df['atbat_num'] == df['atbat_num_min'])
          &
         (df['inning_half'] == 'bottom')
-    ), 'home_starting_pitcher'] = df['atbat_pitcher'] 
-    home_sp = df.loc[df['home_starting_pitcher'].notnull(), :]
-    home_sp = home_sp[['game_id', 'home_starting_pitcher']].\
-        drop_duplicates(inplace=False)
+    ), 'away_starting_pitcher'] = df['atbat_pitcher']
+    
     away_sp = df.loc[df['away_starting_pitcher'].notnull(), :]
     away_sp = away_sp[['game_id', 'away_starting_pitcher']].\
         drop_duplicates(inplace=False)
-
+    home_sp = df.loc[df['home_starting_pitcher'].notnull(), :]
+    home_sp = home_sp[['game_id', 'home_starting_pitcher']].\
+        drop_duplicates(inplace=False)
     # Merge back
     data = pd.merge(
         data,
@@ -126,61 +132,6 @@ def add_starting_pitcher_flag(data):
         on=['game_id'],
         validate='m:1'
     )
-    
-    t = """
-    df = data.loc[data['inning_num'].astype(float) == 1, :]
-    df.loc[:, 'atbat_num'] = df['atbat_num'].astype(float)
-    df = df.groupby(
-        by=['game_id', 'inning_half'],
-        as_index=False
-    ).agg({'atbat_num': 'min'})
-    df.rename(columns={'atbat_num': 'atbat_num_min'}, inplace=True)    
-    starters = pd.merge(
-        data,
-        df,
-        how='left',
-        on=['game_id', 'inning_half'],
-        validate='m:1'
-    )
-    starters = starters.loc[starters['inning_num'].astype(float) == 1, :]
-    starters = starters.loc[:, [
-        'game_id', 'atbat_num', 'inning_half',
-        'atbat_num_min', 'atbat_pitcher'
-    ]].drop_duplicates(inplace=False)
-    starters = starters.loc[(
-        starters['atbat_num'].astype(float) == starters['atbat_num_min']
-    ), :]
-    starters = starters.loc[:, ['game_id', 'inning_half', 'atbat_pitcher']].\
-        drop_duplicates(inplace=False)
-    starters.loc[starters['inning_half'] == 'top',
-                 'away_starting_pitcher'] = starters['atbat_pitcher']
-    starters.loc[starters['inning_half'] == 'bottom',
-                 'home_starting_pitcher'] = starters['atbat_pitcher']
-    starters = starters.drop_duplicates(
-        subset=['game_id', 'away_starting_pitcher', 'home_starting_pitcher'],
-        inplace=False
-    )
-    assert sum((starters['home_starting_pitcher'].notnull()) &
-               (starters['away_starting_pitcher'].notnull())) == 0
-    home_starter = starters.loc[starters['home_starting_pitcher'].notnull(), :]
-    home_starter = home_starter[['game_id', 'home_starting_pitcher']].drop_duplicates()
-    data = pd.merge(
-        data,
-        home_starter,
-        how='left',
-        on=['game_id'],
-        validate='m:1'
-    )
-    
-    away_starter = starters.loc[starters['away_starting_pitcher'].notnull(), :]
-    away_starter = away_starter[['game_id', 'away_starting_pitcher']].drop_duplicates()
-    data = pd.merge(
-        data,
-        away_starter,
-        how='left',
-        on=['game_id'],
-        validate='m:1'
-    )"""
     return data
 
 
@@ -203,6 +154,7 @@ def add_inning_half(data):
     data.loc[:, 'atbat_num'] = data['atbat_num'].astype(float)
     if 'gameId' not in data.columns:
         return data
+    
     # min atbat_num per inning
     min_atbat_num_per_inning = data.groupby(
         by=['game_id', 'inning_num'],

@@ -60,17 +60,10 @@ def process_date_innings(data, path, tablename='innings'):
 
     # Rename innings
     #data = names.rename_table(data, tablename='innings')
-    if all(y in path for y in ['2019', '04', '13']):
-        data.to_csv('/Users/peteraltamura/Desktop/process_innings_start.csv',
-                    index=False)
     data = add.add_game_date(data, path)
     data = add.add_inning_half(data)
     data = add.add_starting_pitcher_flag(data)
-    data = add.add_team(data, path, 'inning')
-    if all(y in path for y in ['2019', '04', '13']):
-        data.to_csv('/Users/peteraltamura/Desktop/process_innings_end.csv',
-                    index=False)
-    
+    data = add.add_team(data, path, 'inning')   
     return data
 
 
@@ -89,6 +82,7 @@ def process_date_games(path):
 
     # Get Files
     #files_ = os.listdir(path)
+    print("Processing Path: {}".format(path))
 
     # Create desination dir
     if not os.path.exists(
@@ -168,8 +162,8 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=3, day=25)
-    max_date = dt.datetime(year=2019, month=6, day=29)
+    min_date = dt.datetime(year=2019, month=3, day=12)
+    max_date = dt.datetime(year=2019, month=6, day=30)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
