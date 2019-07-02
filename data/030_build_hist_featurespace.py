@@ -467,9 +467,7 @@ if __name__ == "__main__":
     starter_table = starter_table.loc[:, [
         'gameId', 'home_starting_pitcher', 'away_starting_pitcher'
     ]]
-    starter_table.to_csv('/Users/peteraltamura/Desktop/starter_table.csv',
-                         index=False)
-    sdlfkj
+    
     df_matchup_base = pd.merge(
         df_matchup_base,
         starter_table,
