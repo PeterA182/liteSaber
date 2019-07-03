@@ -322,8 +322,8 @@ if __name__ == "__main__":
     #CONFIG = parse_config("./configuration.json")
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=7, day=1)
-    max_date = dt.datetime(year=2019, month=7, day=1)
+    min_date = dt.datetime(year=2019, month=7, day=2)
+    max_date = dt.datetime(year=2019, month=7, day=2)
 
     # Run For
     run_boxscore = True

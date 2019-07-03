@@ -97,13 +97,8 @@ def process_date_games(path):
             for x in ['batting', 'pitching', 'boxscore', 'innings']
     ):
         print("{} :: Passed".format(str(path)))
-    else:
-        print(
-            CONFIG.get('paths').get('normalized') + \
-            path.split("/")[-2] + "/" + \
-            "batting.parquet"
-        )
 
+    else:
         # Process batting
         df = pd.read_parquet(path+"batting.parquet")
         df = process_date_batting(df, path)
@@ -162,8 +157,8 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime(year=2019, month=7, day=1)
-    max_date = dt.datetime(year=2019, month=7, day=1)
+    min_date = dt.datetime(year=2019, month=7, day=2)
+    max_date = dt.datetime(year=2019, month=7, day=2)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
@@ -173,7 +168,6 @@ if __name__ == "__main__":
     # Estalish path
     dates = [CONFIG.get('paths').get('raw') +
              dd.strftime('year_%Ymonth_%mday_%d/') for dd in dates]
-    print(dates[:12])
     proc_ = mp.cpu_count()
     POOL = mp.Pool(proc_)
     r = POOL.map(process_date_games, dates)

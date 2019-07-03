@@ -193,7 +193,6 @@ if __name__ == "__main__":
         )
         df.loc[:, 'gameDate'] = df['gameId'].apply(lambda x: x.split("_"))
         df = df.loc[df['gameDate'].apply(lambda x: str(x[1])) == str(yr), :]
-        df.to_csv('/Users/peteraltamura/Desktop/dates.csv')
         df.loc[:, 'gameDate'] = df['gameDate'].apply(
             lambda x: dt.datetime(
                 year=int(str(x[1])),
