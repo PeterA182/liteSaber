@@ -180,8 +180,14 @@ def add_disposition_flags(df_boxscore):
         ), 'away_team_last_series_away'] = curr_box['away_team_last_series_away'].shift(1)
 
         # Combine
-        add1 = curr_box.loc[curr_box['home_code'] == team, :][['gameId', 'home_code', 'home_team_last_series_home']]
-        add2 = curr_box.loc[curr_box['away_code'] == team, :][['gameId', 'away_code', 'away_team_last_series_away']]
+        add1 = curr_box.loc[curr_box['home_code'] == team, :][[
+            'gameId', 'home_code',
+            'home_team_last_series_home'
+        ]]
+        add2 = curr_box.loc[curr_box['away_code'] == team, :][[
+            'gameId', 'away_code',
+            'away_team_last_series_away'
+        ]]
         results_home.append(add1)
         results_away.append(add2)
         
@@ -642,17 +648,21 @@ if __name__ == "__main__":
         'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
         'StrikeOuts', 'Triples'
     ]
-    featurespace = ['gameId', 'gameDate', ]
 
     # ---------- ---------- ----------
     # Get Historic Boxscores
     df_box_hist = get_hist_boxscores(year)
-    print(df_box_hist.shape)
+    featurespace.extend(['series_game_1_flag', 'series_game_2_flag',
+                         'series_game_3_flag', 'series_game_4_flag'])
+
+    # ---------- ---------- ----------
+    # Add last series disposition
     df_box_hist = add_disposition_flags(df_box_hist)
-    print(df_box_hist.shape)
-    
-    df_box_hist.to_csv('/Users/peteraltamura/Desktop/box_series_flag.csv', index=False)
-    ksdfjksd
+    featurespace.extend([
+        'away_team_last_series_away', 'home_team_last_series_home'
+    ])
+
+    # Add Previous Game Id
     df_prev_game_ids = get_prev_game_id(df_box_hist)
 
     # ----------  ----------  ----------

@@ -15,6 +15,254 @@ GAMES ARE WIDE
 """
 
 
+def add_series_game_indicator(df_current, d):
+    """
+    """
+    
+    # Read in boxscore from previous games in season
+    paths = [
+        CONFIG.get('paths').get('normalized') + \
+        date_str + "/boxscore.parquet" for date_str in
+        os.listdir(CONFIG.get('paths').get('normalized'))
+    ]
+    paths = [
+        p for p in paths if (
+            (str(d.year) in p.split("/")[4])
+        ) and os.path.isfile(p)
+    ]
+    paths = [
+        p for p in paths if (
+            p.split("/")[4] != "year_{}month_{}day_{}".format(
+                str(d.year),
+                str(d.month).zfill(2),
+                str(d.day).zfill(2)
+            )
+        )
+    ]
+    paths = [p for p in paths if os.path.exists(p)]
+    df_boxscore = pd.concat(
+        objs=[pd.read_parquet(p) for p in paths],
+        axis=0
+    )
+    df_boxscore = df_boxscore.loc[:, [
+        'gameId', 'home_code', 'away_code',
+    ]]
+    curr_table = df_current.loc[:, [
+        'gameId', 'home_code', 'away_code'
+    ]]
+
+    df_boxscore = pd.concat(
+        objs=[df_boxscore, curr_table],
+        axis=0
+    )
+
+    # Game Date
+    df_boxscore.loc[:, 'gameDate'] = \
+        df_boxscore['gameId'].apply(
+            lambda x: x.split("_")
+        )
+    df_boxscore.loc[:, 'gameDate'] = \
+        df_boxscore['gameDate'].apply(
+            lambda d: dt.datetime(
+                year=int(d[1]),
+                month=int(d[2]),
+                day=int(d[3])
+            )
+        )
+
+    # Add Date
+    df_boxscore.loc[:, 'gameDate'] = pd.to_datetime(
+            df_boxscore['gameDate'], infer_datetime_format=True
+    )
+    
+    # Do for all home teams
+    df_boxscore.sort_values(
+        by=['home_code', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    df_boxscore.loc[:, 'series_game_1_flag'] = 0
+    df_boxscore.loc[(
+        df_boxscore['away_code'] !=
+        df_boxscore['away_code'].shift(1)
+    ), 'series_game_1_flag'] = 1
+    df_boxscore.loc[:, 'series_game_2_flag'] = 0
+    df_boxscore.loc[(
+        (df_boxscore['away_code'] == df_boxscore['away_code'].shift(1))
+        &
+        (df_boxscore['series_game_1_flag'].shift(1) == 1)
+    ), 'series_game_2_flag'] = 1
+    if any(
+        (df_boxscore['series_game_2_flag'].shift(1) == 1)
+        &
+        (df_boxscore['away_code']==df_boxscore['away_code'].shift(1))
+        &
+        (df_boxscore['home_code']==df_boxscore['home_code'].shift(1))
+    ):
+        df_boxscore.loc[:, 'series_game_3_flag'] = 0
+        df_boxscore.loc[(
+            (df_boxscore['series_game_2_flag'].shift(1) == 1)
+            &
+            (df_boxscore['away_code']==df_boxscore['away_code'].shift(1))
+            &
+            (df_boxscore['home_code']==df_boxscore['home_code'].shift(1))
+        ), 'series_game_3_flag'] = 1
+        if any(
+                (df_boxscore['series_game_3_flag'].shift(1) == 1)
+                &
+                (df_boxscore['series_game_1_flag'] == 0)
+        ):
+            df_boxscore.loc[:, 'series_game_4_flag'] = 0
+            df_boxscore.loc[(
+                (df_boxscore['series_game_3_flag'].shift(1) == 1)
+                &
+                (df_boxscore['series_game_1_flag'] == 0)
+            ), 'series_game_4_flag'] = 1
+
+    df_boxscore = df_boxscore.loc[df_boxscore['gameDate'] == d, :]
+    return df_boxscore
+
+
+def add_disposition_flags(df_boxscore):
+    """
+    """
+    if 'series_game_1_flag' not in df_boxscore.columns:
+        df_boxscore = add_series_game_indicator(df_boxscore)
+    df_boxscore.loc[:, 'gameDate'] = \
+        df_boxscore['gameId'].apply(
+            lambda x: x.split("_")
+        )
+    df_boxscore.loc[:, 'gameDate'] = \
+        df_boxscore['gameDate'].apply(
+            lambda d: dt.datetime(
+                year=int(d[1]),
+                month=int(d[2]),
+                day=int(d[3])
+            )
+        )
+
+    # Add Date
+    df_boxscore.loc[:, 'gameDate'] = pd.to_datetime(
+            df_boxscore['gameDate'], infer_datetime_format=True
+    )
+    
+    # Do for all home teams
+    df_boxscore.sort_values(
+        by=['home_code', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    init_row = df_boxscore.shape[0]
+    
+    # home_last_series_home
+    results_home = []
+    results_away = []
+    teams = list(set(
+        list(df_boxscore['away_code']) + \
+        list(df_boxscore['home_code'])
+    ))
+    
+    for team in teams:
+        curr_box = df_boxscore.loc[(
+            (df_boxscore['home_code'] == team)
+            |
+            (df_boxscore['away_code'] == team)
+        ), :]
+        curr_box.sort_values(
+            by=['gameDate'],
+            ascending=True,
+            inplace=True
+        )
+
+        # Home team last series home
+        curr_box.loc[:, 'home_team_last_series_home'] = 0
+        curr_box.loc[(
+            (curr_box['series_game_1_flag'] == 1)
+            &
+            (curr_box['home_code'] == curr_box['home_code'].shift(1))
+            &
+            (curr_box['home_code'] == team)
+        ), 'home_team_last_series_home'] = 1
+    
+        # Away team last series away
+        curr_box.loc[:, 'away_team_last_series_away'] = 0
+        curr_box.loc[(
+            (curr_box['series_game_1_flag'] == 1)
+            &
+            (curr_box['away_code'] == curr_box['away_code'].shift(1))
+            &
+            (curr_box['away_code'] == team)
+        ), 'away_team_last_series_away'] = 1
+
+        # Fill forward 1
+        curr_box.reset_index(drop=True, inplace=True)
+        curr_box.loc[(
+            (curr_box['away_code'] == curr_box['away_code'].shift(1))
+            &
+            (curr_box['home_code'] == curr_box['home_code'].shift(1))
+        ), 'home_team_last_series_home'] = curr_box['home_team_last_series_home'].shift(1)
+        curr_box.loc[(
+            (curr_box['away_code'] == curr_box['away_code'].shift(1))
+            &
+            (curr_box['home_code'] == curr_box['home_code'].shift(1))
+        ), 'away_team_last_series_away'] = curr_box['away_team_last_series_away'].shift(1)
+
+        # Fill forward 2
+        curr_box.reset_index(drop=True, inplace=True)
+        curr_box.loc[(
+            (curr_box['away_code'] == curr_box['away_code'].shift(1))
+            &
+            (curr_box['home_code'] == curr_box['home_code'].shift(1))
+        ), 'home_team_last_series_home'] = curr_box['home_team_last_series_home'].shift(1)
+        curr_box.loc[(
+            (curr_box['away_code'] == curr_box['away_code'].shift(1))
+            &
+            (curr_box['home_code'] == curr_box['home_code'].shift(1))
+        ), 'away_team_last_series_away'] = curr_box['away_team_last_series_away'].shift(1)
+
+        # Combine
+        add1 = curr_box.loc[curr_box['home_code'] == team, :][[
+            'gameId', 'home_code',
+            'home_team_last_series_home'
+        ]]
+        add2 = curr_box.loc[curr_box['away_code'] == team, :][[
+            'gameId', 'away_code',
+            'away_team_last_series_away'
+        ]]
+        results_home.append(add1)
+        results_away.append(add2)
+        
+    # Concatenate Home and Away in prep for merge
+    results_home = pd.concat(
+        objs=results_home,
+        axis=0
+    )
+    results_away = pd.concat(
+        objs=results_away,
+        axis=0
+    )
+
+    # Merge
+    df_boxscore = pd.merge(
+        df_boxscore,
+        results_home,
+        how='left',
+        on=['gameId', 'home_code'],
+        validate='1:1'
+    )
+    df_boxscore = pd.merge(
+        df_boxscore,
+        results_away,
+        how='left',
+        on=['gameId', 'away_code'],
+        validate='1:1'
+    )
+    # The above should have duplicated the entire table
+    #   (by iterating over team)
+    assert df_boxscore.shape[0] == init_row
+    return df_boxscore
+
+
 def add_date(data):
     """
     Parse date from gameId 
@@ -66,6 +314,8 @@ def get_hist_boxscores(year):
         objs=df_boxscores,
         axis=0
     )
+
+    # Add game number in series indicators
     return df_boxscores
 
 
@@ -287,7 +537,7 @@ if __name__ == "__main__":
 
     # ----------  ----------  ----------
     # Parameters
-    date = dt.datetime(year=2019, month=7, day=1)
+    date = dt.datetime(year=2019, month=7, day=2)
     bullpen_top_pitcher_count = 6
     pitcher_metrics = [
         'BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
@@ -305,19 +555,25 @@ if __name__ == "__main__":
     # Paths
     ref_dest = "/Volumes/Transcend/99_reference/"
 
-    # ---------- ---------- ----------
-    # Get Historic Boxscores
-    df_box_hist = get_hist_boxscores(str(date.year))
-    df_prev_game_ids = get_prev_game_id(df_box_hist, date)
-    # Win Loss by Disposition
-    home_team_win_pct_home, \
-        away_team_win_pct_away = win_loss_by_disposition(str(date.year))
     
     # ---------- ---------- ----------
     # Get Basic Matchup Table
     df_matchup_base = get_matchup_base_table(date=date)
     df_matchup_base = add_date(df_matchup_base)
+    df_matchup_base = add_team_codes(df_matchup_base)
 
+    # ---------- ---------- ----------
+    # Get Historic Boxscores
+    df_box_hist = get_hist_boxscores(str(date.year))
+    df_box_hist = add_series_game_indicator(df_matchup_base, date)
+    df_box_hist.to_csv('/Users/peteraltamura/Desktop/today_box_hist.csv',
+                       index=False)
+    df_prev_game_ids = get_prev_game_id(df_box_hist, date)
+
+    # Win Loss by Disposition
+    home_team_win_pct_home, \
+        away_team_win_pct_away = win_loss_by_disposition(str(date.year))
+    
     # Narrow to immediate dimensions
     df_matchup_base = df_matchup_base.loc[:, [
         'gameId', 'gameDate',

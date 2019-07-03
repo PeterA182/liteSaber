@@ -66,7 +66,7 @@ def extract_probables(data):
         pitcher_prev_side = np.NaN
     df_home = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
                        'probableStarterStat': [pitcher_prev_stat],
-                       'probableStarterSide': [pitcher_prev_side]})
+                       'probableStarterSide': [str(pitcher_prev_side)]})
 
     # Away
     try:
@@ -83,7 +83,12 @@ def extract_probables(data):
         pitcher_prev_side = np.NaN
     df_away = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
                             'probableStarterStat': [pitcher_prev_stat],
-                            'probableStarterSide': [pitcher_prev_side]})
+                            'probableStarterSide': [str(pitcher_prev_side)]})
+    
+    if any(df_away['probableStarterSide'].apply(lambda x: "current" in x.lower())):
+        raise Exception("Probable Starters have been replaced with gameplay data")
+    if any(df_home['probableStarterSide'].apply(lambda x: "current" in x.lower())):
+        raise Exception("Probable Starters have been replaced with gameplay data")
     df = pd.concat(objs=[df_home, df_away], axis=0)
     return df
 
@@ -196,6 +201,28 @@ def scrape_game_previews(date):
         },
         inplace=True
     )
+
+    # Make Wide
+    results = []
+    for gid in list(set(probable_starters['gameId'])):
+        curr = probable_starters.loc[probable_starters['gameId'] == gid, :]
+        assert curr.shape[0] == 2
+        curr_home = curr.loc[curr['probableStarterSide'] == 'home', :]
+        curr_home = curr_home.loc[:, [
+            'gameId', 'startingPitcherId', 'startingPitcherTeam', 'startingPitcherDob',
+            'startingPitcherThrows', 'startingPitcherWeight'
+        ]]
+        curr_away = curr.loc[curr['probableStarterSide'] == 'away', :]
+        curr_away = curr_away.loc[:, [
+            'gameId', 'startingPitcherId', 'startingPitcherTeam', 'startingPitcherDob',
+            'startingPitcherThrows', 'startingPitcherWeight'
+        ]]
+        curr = pd.merge(
+            curr_home, curr_away, how='left',
+            on=['gameId'], validate='1:1', suffixes=['_home', '_away']
+        )
+        results.append(curr)
+    probable_starters = pd.concat(results, axis=0)
     
     # Write out
     outpath = base_dest + "{}/".format(date_url.replace("/", ""))
@@ -209,13 +236,12 @@ def scrape_game_previews(date):
         outpath + 'probableStarters.parquet'
     )
 
-
 if __name__ == "__main__":
 
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2019, month=7, day=2)
+    date = dt.datetime(year=2019, month=7, day=3)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"
