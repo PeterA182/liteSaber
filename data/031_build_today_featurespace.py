@@ -287,7 +287,7 @@ if __name__ == "__main__":
 
     # ----------  ----------  ----------
     # Parameters
-    date = dt.datetime(year=2019, month=6, day=30)
+    date = dt.datetime(year=2019, month=7, day=1)
     bullpen_top_pitcher_count = 6
     pitcher_metrics = [
         'BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
