@@ -44,6 +44,7 @@ def add_series_game_indicator(df_current, d):
         objs=[pd.read_parquet(p) for p in paths],
         axis=0
     )
+    df_boxscore = add_team_codes(df_boxscore)
     df_boxscore = df_boxscore.loc[:, [
         'gameId', 'home_code', 'away_code',
     ]]
@@ -118,7 +119,6 @@ def add_series_game_indicator(df_current, d):
                 &
                 (df_boxscore['series_game_1_flag'] == 0)
             ), 'series_game_4_flag'] = 1
-
     df_boxscore = df_boxscore.loc[df_boxscore['gameDate'] == d, :]
     return df_boxscore
 
@@ -314,7 +314,7 @@ def get_hist_boxscores(year):
         objs=df_boxscores,
         axis=0
     )
-
+    
     # Add game number in series indicators
     return df_boxscores
 
@@ -329,23 +329,20 @@ def get_prev_game_id(boxscore_hist, curr_date):
 
     # Add date to boxscore
     boxscore_hist = add_date(boxscore_hist)
-    boxscore_hist.to_csv(
-        '/Users/peteraltamura/Desktop/boxhist.csv',
-        index=False
-    )
-
+    print(boxscore_hist[['gameDate']].shape)
+    boxscore_hist = boxscore_hist.loc[
+        boxscore_hist['gameDate'] < curr_date, :]
+    print(boxscore_hist.shape)
+    
     # Sort gameIds for each team
     for team in list(set(
             list(boxscore_hist['away_code']) +
             list(boxscore_hist['home_code'])
     )):
-    #for team in ['sfn']:
-        print(team)
+
         # Combine Home and Away
         team_data = boxscore_hist.loc[
             boxscore_hist['gameId'].str.contains(team), :]
-        team_data.to_csv('/Users/peteraltamura/Desktop/sfn_box_missing.csv',
-                         index=False)
         max_date = max(team_data['gameDate'])
         team_data.sort_values(by=['gameDate'], ascending=True, inplace=True)
         team_data.loc[:, 'team_code'] = team
@@ -354,9 +351,13 @@ def get_prev_game_id(boxscore_hist, curr_date):
         team_data['rank'] = team_data.index + 1
         team_data = team_data.loc[
             team_data['rank'] == np.max(team_data['rank']), :]
-        assert team_data.shape[0] == 1
+        assert team_data.shape[0] <= 2
+        if team_data.shape[0] > 1:
+            team_data = team_data.tail(1)
         
         team_data.rename(columns={'gameId': 'prevGameId'}, inplace=True)
+        team_data.reset_index(drop=True, inplace=True)
+        
         team_tables.append(team_data[['team_code', 'prevGameId']])   
     team_tables = pd.concat(
         objs=team_tables,
@@ -374,7 +375,7 @@ def add_prev_game_ids(data, prev):
         how='left',
         left_on=['home_code'],
         right_on=['team_code'],
-        validate='1:1'
+        validate='m:1'
     )
     data.drop(labels=['team_code'], axis=1, inplace=True)
     data.rename(
@@ -387,7 +388,7 @@ def add_prev_game_ids(data, prev):
         how='left',
         left_on=['away_code'],
         right_on=['team_code'],
-        validate='1:1'
+        validate='m:1'
     )
     data.drop(labels=['team_code'], axis=1, inplace=True)
     data.rename(
@@ -437,7 +438,12 @@ def add_starter_details(data):
         'id', 'height', 'throws', 'weight', 'dob'
     ]]
 
-    # Merge for Home
+    # TODO TODO data has not starters
+    data = data.loc[(
+        (data['home_starting_pitcher'].notnull())
+        &
+        (data['away_starting_pitcher'].notnull())
+    ), :]
     data = pd.merge(
         data,
         registry,
@@ -531,13 +537,121 @@ def starter_details_indicators(data):
     return data
 
 
+def get_starters_today(d):
+    """
+    """
+
+    # Today review
+    df_preview = pd.read_parquet(
+        CONFIG.get('paths').get('raw') + \
+        "year_{}month_{}day_{}/".format(
+            str(d.year),
+            str(d.month).zfill(2),
+            str(d.day).zfill(2)
+        ) + "probableStarters.parquet"
+    )
+
+    # Filter to both not null
+    df_preview = df_preview.loc[(
+        (df_preview['startingPitcherId_home'].notnull())
+        &
+        (df_preview['startingPitcherId_away'].notnull())
+    ), :]
+    df_preview = df_preview.loc[:, [
+        'gameId', 'startingPitcherId_home', 'startingPitcherId_away'
+    ]]
+    df_preview.rename(
+        columns={
+            'startingPitcherId_home': 'home_starting_pitcher',
+            'startingPitcherId_away': 'away_starting_pitcher'
+        },
+        inplace=True
+    )
+    return df_preview
+
+
+def add_starter_stats(data, years):
+    """
+    """
+
+    # Get full paths to all files
+    paths = [
+        CONFIG.get('paths').get('pitcher_saber')+gid+"/pitcher_saber.csv"
+        for gid in os.listdir(CONFIG.get('paths').get('pitcher_saber'))
+        if any(y in gid for y in years)
+    ]
+
+    # Concatenate all paths created
+    df_pitching = pd.concat(
+        objs=[pd.read_csv(fpath) for fpath in paths if fpath[-4:] == ".csv"],
+        axis=0
+    )
+    df_pitching.loc[:, 'pitcherId'] = df_pitching['pitcherId'].astype(str)
+    # Sort ascending pitcherId and date
+    df_pitching.sort_values(
+        by=['pitcherId', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    df_pitching.reset_index(drop=True, inplace=True)
+    df_pitching.loc[:, 'rankItem'] = 1
+    df_pitching['rank'] = df_pitching.groupby('pitcherId')['rankItem'].cumcount()
+
+    # Get most recently available stats per pitcher
+    # Rank pitcherId appearances in data
+    data.sort_values(
+        by=['home_starting_pitcher_id', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    data.reset_index(drop=True, inplace=True)
+    data.loc[:, 'rankItem'] = 1
+    data.loc[:, 'home_starting_pitcher_id_rank'] = \
+        data.groupby('home_starting_pitcher_id')['rankItem'].cumcount()
+    data.sort_values(
+        by=['away_starting_pitcher_id', 'gameDate'],
+        ascending=True,
+        inplace=True
+    )
+    data.reset_index(drop=True, inplace=True)
+    data.loc[:, 'rankItem'] = 1
+    data['away_starting_pitcher_id_rank'] = \
+        data.groupby('away_starting_pitcher_id')['rankItem'].cumcount()
+    
+    # Decrease Perf Rank by 1
+    #data['home_starting_pitcher_id_rank'] -= 1
+    #data['away_starting_pitcher_id_rank'] -= 1
+
+    # Merge
+    data.to_csv('/Users/peteraltamura/Desktop/data_pre_merge_1.csv', index=False)
+    df_pitching.to_csv('/Users/peteraltamura/Desktop/df_pitching_pre_merge_1.csv', index=False)
+    data = pd.merge(
+        data,
+        df_pitching,
+        how='left',
+        left_on=['away_starting_pitcher_id_rank', 'away_starting_pitcher_id'],
+        right_on=['rank', 'pitcherId'],
+        validate='1:1',
+        suffixes=['', '_away']
+    )
+    data = pd.merge(
+        data,
+        df_pitching,
+        how='left',
+        left_on=['home_starting_pitcher_id_rank', 'home_starting_pitcher_id'],
+        right_on=['rank', 'pitcherId'],
+        validate='1:1',
+        suffixes=['', '_home']
+    )
+    return data    
+
 
 if __name__ == "__main__":
 
 
     # ----------  ----------  ----------
     # Parameters
-    date = dt.datetime(year=2019, month=7, day=2)
+    date = dt.datetime(year=2019, month=7, day=3)
     bullpen_top_pitcher_count = 6
     pitcher_metrics = [
         'BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
@@ -561,65 +675,37 @@ if __name__ == "__main__":
     df_matchup_base = get_matchup_base_table(date=date)
     df_matchup_base = add_date(df_matchup_base)
     df_matchup_base = add_team_codes(df_matchup_base)
+    df_matchup_base = add_series_game_indicator(df_matchup_base, date)
 
     # ---------- ---------- ----------
     # Get Historic Boxscores
     df_box_hist = get_hist_boxscores(str(date.year))
-    df_box_hist = add_series_game_indicator(df_matchup_base, date)
-    df_box_hist.to_csv('/Users/peteraltamura/Desktop/today_box_hist.csv',
-                       index=False)
+    df_box_hist.sort_values(by=['gameId'], ascending=True, inplace=True)    
     df_prev_game_ids = get_prev_game_id(df_box_hist, date)
 
-    # Win Loss by Disposition
-    home_team_win_pct_home, \
-        away_team_win_pct_away = win_loss_by_disposition(str(date.year))
+    # Narrow to immediate dimensions
+    starter_table = get_starters_today(date)
+
+    starter_table = starter_table[[
+        'gameId', 'home_starting_pitcher', 'away_starting_pitcher'
+    ]]
+
+    df_matchup_base = pd.merge(
+        df_matchup_base,
+        starter_table,
+        how='left',
+        on=['gameId'],
+        validate='1:1'
+    )
     
     # Narrow to immediate dimensions
     df_matchup_base = df_matchup_base.loc[:, [
         'gameId', 'gameDate',
-        'startingPitcherId', 'probableStarterSide'
+        'home_starting_pitcher', 'away_starting_pitcher'
     ]]
-
-    # # # # 
-    # THIS PART IS DIFFERENT FOR TODAY THAN HISTORIC PREP
-    # # # #
-    # Only keep starting pitcher id that are filled
-    df_matchup_base = df_matchup_base.loc[
-        df_matchup_base['startingPitcherId'].notnull(), :]
-
-    # Only keep gameIds with both home and away
-    vc = df_matchup_base['gameId'].value_counts()
-    vc = pd.DataFrame(vc).reset_index(inplace=False)
-    vc.columns = ['gameId', 'freq']
-    gids = list(vc.loc[vc['freq'] == 2, :]['gameId'])
-    df_matchup_base = df_matchup_base.loc[
-        df_matchup_base['gameId'].isin(gids), :]
-
-    # Pivot out to flatten
-    df_matchup_base = df_matchup_base.pivot_table(
-        index=['gameId', 'gameDate'],
-        columns=['probableStarterSide'],
-        values=['startingPitcherId'],
-        aggfunc='first'
-    )
-    df_matchup_base.reset_index(inplace=True)
-    df_matchup_base.columns = [
-        x[0] if x[1] == '' else x[0]+"_"+x[1] for
-        x in df_matchup_base.columns
-    ]
-
-    # Rename
-    df_matchup_base.rename(
-        columns={
-            'startingPitcherId_away': 'away_starting_pitcher',
-            'startingPitcherId_home': 'home_starting_pitcher'
-        },
-        inplace=True
-    )
-
-    # # # #
-    # BACK TO MATCHING HIST
-    # # # #
+    
+    
+    # Narrow down fields for matchup base table
     df_matchup_base = df_matchup_base.loc[:, [
         'gameId', 'gameDate',
         'away_starting_pitcher', 'home_starting_pitcher'
@@ -637,19 +723,34 @@ if __name__ == "__main__":
     # ----------  ----------  ----------
     # Add Previous Game IDs for Merging
     df_matchup_base = add_prev_game_ids(df_matchup_base, df_prev_game_ids)
-    df_matchup_base.to_csv(
-        '/Users/peteraltamura/Desktop/df_matchup_base_tomorrow_details.csv',
-        index=False
-    )
+    df_matchup_base = df_matchup_base.loc[(
+        (df_matchup_base['homePrevGameId'].notnull())
+        &
+        (df_matchup_base['awayPrevGameId'].notnull())
+        &
+        (df_matchup_base['away_starting_pitcher'].notnull())
+        &
+        (df_matchup_base['home_starting_pitcher'].notnull())
+    ), :]
 
     # ----------  ----------  ----------
     # # # #
     # THIS IS WHERE WIN / LOSS WOULD BE ADDED -- TARGET
     # # # #
     
-
-    # ----------  ----------  ----------
-    # Add Home starter trailing stats
+    df_matchup_base.rename(
+        columns={'home_starting_pitcher': 'home_starting_pitcher_id',
+                 'away_starting_pitcher': 'away_starting_pitcher_id'},
+        inplace=True
+    )
     
-    # Add Away Starter trailing stats
+    # ----------  ----------  ----------
+    # Add starter trailing stats
+    df_matchup_base = add_starter_stats(data=df_matchup_base, years=[str(date.year)])
+    df_matchup_base.to_csv(
+        '/Users/peteraltamura/Desktop/df_matchup_base_tomorrow_details.csv',
+        index=False
+    )
+
+
     

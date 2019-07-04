@@ -648,6 +648,7 @@ if __name__ == "__main__":
         'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
         'StrikeOuts', 'Triples'
     ]
+    featurespace = []
 
     # ---------- ---------- ----------
     # Get Historic Boxscores
