@@ -241,7 +241,7 @@ if __name__ == "__main__":
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2019, month=7, day=3)
+    date = dt.datetime(year=2019, month=7, day=4)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"

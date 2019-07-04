@@ -643,7 +643,90 @@ def add_starter_stats(data, years):
         validate='1:1',
         suffixes=['', '_home']
     )
-    return data    
+    return data
+
+
+def add_team_batting_stats(df, years, batter_metrics):
+    """
+    """
+    gids = list(set(df['gameId']))
+    bat_saber_paths = [
+        CONFIG.get('paths').get('batter_saber') + gid + \
+        "/batter_saber_team.parquet" for gid in
+        os.listdir(CONFIG.get('paths').get('batter_saber'))
+    ]
+    curr_gids = list(set(
+        list(df['homePrevGameId']) +
+        list(df['awayPrevGameId'])
+    ))
+    bat_saber_paths = [
+        x for x in bat_saber_paths if any(
+            gid in x for gid in curr_gids
+        )
+    ]
+    batter_saber = pd.concat(
+        objs=[pd.read_parquet(path) for path in bat_saber_paths],
+        axis=0
+    )
+    print(batter_saber.shape)
+    print("batter saber shape above")
+
+    # Get top 9 by AB
+    batter_saber['game_id_team'] = (
+        batter_saber['gameId'] + batter_saber['team']
+    )
+    batter_saber.sort_values(by=['game_id_team', 'woba_trail6'],
+                             ascending=False,
+                             inplace=True)
+    batter_saber['rank'] = batter_saber.groupby('game_id_team')\
+        ['batterId'].cumcount()
+    batter_saber = batter_saber.loc[batter_saber['rank'] <= 9, :]
+    batter_saber.loc[batter_saber['rank'] < 5, 'batter_group'] = 'high'
+    batter_saber.loc[batter_saber['rank'] >= 5, 'batter_group'] = 'low'
+
+    # Aggregate
+    batter_saber = batter_saber.groupby(
+        by=['gameId', 'team', 'batter_group'],
+        as_index=False
+    ).agg({k: 'mean' for k in batter_metrics})
+    
+    batter_saber = batter_saber.pivot_table(
+        index=['gameId', 'team'],
+        columns=['batter_group'],
+        values=[k for k in batter_metrics],
+        aggfunc='mean'
+    )
+    batter_saber.reset_index(inplace=True)
+    batter_saber.columns = [
+        x[0] if x[1] == '' else x[0]+"_"+x[1]
+        for x in batter_saber.columns
+    ]
+    batter_saber.to_csv(
+        '/Users/peteraltamura/Desktop/batter_saber_wide.csv', index=False)
+    
+    # Merge Home
+    df = pd.merge(
+        df,
+        batter_saber,
+        how='left',
+        left_on=['homePrevGameId', 'home_code'],
+        right_on=['gameId', 'team'],
+        validate='1:1',
+        suffixes=['', '_HOME']
+    )
+    # Merge Away
+    df = pd.merge(
+        df,
+        batter_saber,
+        how='left',
+        left_on=['awayPrevGameId', 'away_code'],
+        right_on=['gameId', 'team'],
+        validate='1:1',
+        suffixes=['', '_AWAY']
+    )
+    return df
+    
+    
 
 
 if __name__ == "__main__":
@@ -651,20 +734,28 @@ if __name__ == "__main__":
 
     # ----------  ----------  ----------
     # Parameters
-    date = dt.datetime(year=2019, month=7, day=3)
+    date = dt.datetime(year=2019, month=7, day=4)
     bullpen_top_pitcher_count = 6
     pitcher_metrics = [
         'BF', 'ER', 'ERA', 'HitsAllowed', 'Holds',
         'SeasonLosses', 'SeasonWins', 'numberPitches',
         'Outs', 'RunsAllowed', 'Strikes', 'SO'
     ]
-    top_batter_count = 12
+    #top_batter_count = 9
+    #batter_metrics = [
+    #    'Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
+    #    'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
+    #    'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
+    #    'StrikeOuts', 'Triples'
+    #]
     batter_metrics = [
-        'Assists', 'AB', 'BB', 'FO', 'Avg', 'H',
-        'HBP', 'HR', 'Doubles' 'GroundOuts', 'batterLob',
-        'OBP', 'OPS', 'R', 'RBI', 'SluggingPct',
-        'StrikeOuts', 'Triples'
+        'batterWalkPercentage_trail3', 'batterWalkPercentage_trail6',
+        'batterKPercentage_trail3', 'batterKPercentage_trail6',
+        'batterISO_trail3', 'batterISO_trail6', 'batterBABIP_trail3',
+        'batterBABIP_trail6', 'woba_trail3', 'woba_trail6',
+        'ab_trail3', 'ab_trail6'
     ]
+
 
     # Paths
     ref_dest = "/Volumes/Transcend/99_reference/"
@@ -753,4 +844,20 @@ if __name__ == "__main__":
     )
 
 
-    
+    # ----------  ----------  ----------
+    # Add Batting trailing Stats (team wide)
+    df_matchup_base = add_team_batting_stats(df=df_matchup_base,
+                                              years=[str(date.year)],
+                                              batter_metrics=batter_metrics)
+    fname = "{}_today_features.parquet".format(
+        date.strftime("%Y_%m_%d")
+    )   
+    df_matchup_base.to_parquet(
+        CONFIG.get('paths').get('full_featurespaces') + \
+        fname
+    )
+    df_matchup_base.to_csv(
+        CONFIG.get('paths').get('full_featurespaces') + \
+        fname.replace(".parquet", ".csv"),
+        index=False
+    )

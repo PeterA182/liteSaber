@@ -13,7 +13,7 @@ def walk_percentage_metric(data, trails):
     """
 
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
@@ -24,7 +24,7 @@ def walk_percentage_metric(data, trails):
         data['batterWalkPercentage_trail{}'.format(str(trail))] = (
             data.numerator / data.denominator
         )
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
              [x for x in data.columns if 'batterWalkPercentage' in x]
     data = data.loc[:, return_cols]
     return data
@@ -35,7 +35,7 @@ def k_percentage_metric(data, trails):
     """
     
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
@@ -46,7 +46,7 @@ def k_percentage_metric(data, trails):
         data['batterKPercentage_trail{}'.format(str(trail))] = (
             data.numerator / data.denominator
         )
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
              [x for x in data.columns if 'batterKPercentage' in x]
     data = data.loc[:, return_cols]
     return data
@@ -57,7 +57,7 @@ def iso_metric(data, trails):
     """
 
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
@@ -68,7 +68,7 @@ def iso_metric(data, trails):
         data['batterISO_trail{}'.format(trail)] = (
             data.numerator - data.denominator
         )
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
              [x for x in data.columns if 'batterISO' in x]
     data = data.loc[:, return_cols]
     return data
@@ -80,7 +80,7 @@ def babip_metric(data, trails):
     """
 
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
@@ -113,7 +113,7 @@ def babip_metric(data, trails):
             (data['bip']-data['hr'])/
             (data['ab']-data['k']-data['hr']-data['sacBunt']+data['sacfly'])
         )
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
              [x for x in data.columns if 'batterBABIP' in x]
     data = data.loc[:, return_cols]
     return data
@@ -126,7 +126,7 @@ def woba_metric(data, trails):
     """
 
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
@@ -166,7 +166,7 @@ def woba_metric(data, trails):
              1.271*data['doubles'] + 1.616*data['triples'] + 2.101*data['hr']) /
             (data['ab']+data['bb']+data['sacfly']+data['hbp'])
         )
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
              [x for x in data.columns if 'woba_trail' in x]
     data = data.loc[:, return_cols]
     return data
@@ -177,13 +177,13 @@ def pa_metric(data, trails):
     """
 
     # Sort
-    data.sort_values(by=['batterId', 'gameDate', 'gameId'],
+    data.sort_values(by=['batterId', 'team', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
     for trail in trails:
         data['ab_trail{}'.format(trail)] = data.groupby('batterId')\
             ['batterAB'].rolling(trail).sum().reset_index(drop=True)
-    return_cols = ['batterId', 'gameDate', 'gameId'] + \
+    return_cols = ['batterId', 'team', 'gameDate', 'gameId'] + \
         [x for x in data.columns if 'ab_trail' in x]
     data = data.loc[:, return_cols]
     return data
@@ -239,80 +239,83 @@ if __name__ == "__main__":
 
         # Establish base table
         df_master = df.loc[:, [
-            'gameId', 'gameDate', 'batterId'
+            'gameId', 'gameDate', 'team', 'batterId'
         ]].drop_duplicates(inplace=False)
         
         # Add Walk Percentage
         walk_pct = walk_percentage_metric(df, trails)
-        walk_pct.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        walk_pct.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                                  inplace=True)
         df_master = pd.merge(
             df_master,
             walk_pct,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
 
         # Add K Pct
         k_pct = k_percentage_metric(df, trails)
-        k_pct.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        k_pct.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                                  inplace=True)
         df_master = pd.merge(
             df_master,
             k_pct,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
         
         # ISO
         iso = iso_metric(df, trails)
-        iso.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        iso.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                                  inplace=True)
         df_master = pd.merge(
             df_master,
             iso,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
 
         # BABIP
         babip = babip_metric(df, trails)
-        babip.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        babip.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                                  inplace=True)
         df_master = pd.merge(
             df_master,
             babip,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
 
         # WOBA
         woba = woba_metric(df, trails)
-        woba.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        woba.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                                  inplace=True)
         df_master = pd.merge(
             df_master,
             woba,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
 
         # AtBat Trail Count (for sorting in featurespace)
         ab = pa_metric(df, trails)
-        ab.drop_duplicates(subset=['gameId', 'gameDate', 'batterId'],
+        ab.drop_duplicates(subset=['gameId', 'team', 'gameDate', 'batterId'],
                            inplace=True)
         df_master = pd.merge(
             df_master,
             ab,
             how='left',
-            on=['gameId', 'gameDate', 'batterId'],
+            on=['gameId', 'team', 'gameDate', 'batterId'],
             validate='1:1'
         )
+
+        # Handle team
+        df_master.loc[:, 'team'] = df_master['team'].str[:3]
 
         #
         # ------------------------------
@@ -323,9 +326,9 @@ if __name__ == "__main__":
                 os.makedirs(dest_path)
             df_master.loc[df_master['gameId'] == gid, :].to_parquet(
                 CONFIG.get('paths').get('batter_saber') + \
-                '{}batter_saber.parquet'.format(str(gid))
+                '{}batter_saber_team.parquet'.format(str(gid))
             )
             df_master.loc[df_master['gameId'] == gid, :].to_csv(
                 CONFIG.get('paths').get('batter_saber') + \
-                '{}batter_saber.csv'.format(str(gid)), index=False
+                '{}batter_saber_team.csv'.format(str(gid)), index=False
             )

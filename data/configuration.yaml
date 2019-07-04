@@ -8,8 +8,8 @@ paths:
   pitcher_saber: /Volumes/Transcend/020_gameday_pitcher_saber/
   game_team_metrics: /Volumes/Transcend/game_team_metrics/
   matchup_schedule: /Volumes/Transcend/matchup_schedule/
-  initial_featurespaces: /Volumes/Transcend/030_gameday_initial_featurespaces/
-  full_featurespaces: /Volumes/Transcend/031_gameday_full_featurespaces/
+  initial_featurespaces: /Volumes/Transcend/030_initial_featurespace/
+  full_featurespaces: /Volumes/Transcend/031_full_featurespace/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv
