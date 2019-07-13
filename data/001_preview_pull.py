@@ -53,23 +53,6 @@ def extract_probables(data):
 
     # Home
     try:
-        pitcher_prev_name = resp[0][0][0][2][0][1][0].text
-    except IndexError as IE:
-        pitcher_prev_name = np.NaN
-    try:
-        pitcher_prev_stat = resp[0][0][0][2][0][1][1].text
-    except IndexError as IE:
-        pitcher_prev_stat = np.NaN
-    try:
-        pitcher_prev_side = resp[0][0][0][2][0][1][2].text
-    except IndexError as IE:
-        pitcher_prev_side = np.NaN
-    df_home = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
-                       'probableStarterStat': [pitcher_prev_stat],
-                       'probableStarterSide': [str(pitcher_prev_side)]})
-
-    # Away
-    try:
         pitcher_prev_name = resp[0][0][0][2][1][1][0].text
     except IndexError as IE:
         pitcher_prev_name = np.NaN
@@ -79,6 +62,23 @@ def extract_probables(data):
         pitcher_prev_stat = np.NaN
     try:
         pitcher_prev_side = resp[0][0][0][2][1][1][2].text
+    except IndexError as IE:
+        pitcher_prev_side = np.NaN
+    df_home = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
+                       'probableStarterStat': [pitcher_prev_stat],
+                       'probableStarterSide': [str(pitcher_prev_side)]})
+
+    # Away
+    try:
+        pitcher_prev_name = resp[0][0][0][2][2][1][0].text
+    except IndexError as IE:
+        pitcher_prev_name = np.NaN
+    try:
+        pitcher_prev_stat = resp[0][0][0][2][2][1][1].text
+    except IndexError as IE:
+        pitcher_prev_stat = np.NaN
+    try:
+        pitcher_prev_side = resp[0][0][0][2][2][1][2].text
     except IndexError as IE:
         pitcher_prev_side = np.NaN
     df_away = pd.DataFrame({'probableStarterName': [pitcher_prev_name],
@@ -110,6 +110,7 @@ def scrape_game_previews(date):
     req = BeautifulSoup(test_resp)
     game_links = [x for x in req.find_all('a') if
                   str(x.get('href'))[7:10] == 'gid']
+    print(game_links)
 
     # Previews
     probable_starters = []
@@ -131,6 +132,7 @@ def scrape_game_previews(date):
             objs=probable_starters,
             axis=0
         )
+        print(probable_starters.head())
     except ValueError as VE:
         probable_starters = pd.DataFrame()
         pass
@@ -221,6 +223,7 @@ def scrape_game_previews(date):
             curr_home, curr_away, how='left',
             on=['gameId'], validate='1:1', suffixes=['_home', '_away']
         )
+        print(curr.shape)
         results.append(curr)
     probable_starters = pd.concat(results, axis=0)
     
@@ -241,7 +244,7 @@ if __name__ == "__main__":
     # COnfiguration
 
     # Run Log
-    date = dt.datetime(year=2019, month=7, day=4)
+    date = dt.datetime(year=2019, month=7, day=13)
 
     # Teams
     base_url = "http://gd2.mlb.com/components/game/mlb/"

@@ -10,6 +10,7 @@ paths:
   matchup_schedule: /Volumes/Transcend/matchup_schedule/
   initial_featurespaces: /Volumes/Transcend/030_initial_featurespace/
   full_featurespaces: /Volumes/Transcend/031_full_featurespace/
+  selected_featurespace: /Volumes/Transcend/032_selected_featurespace/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv

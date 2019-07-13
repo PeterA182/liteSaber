@@ -5,6 +5,7 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 import utilities as util
+import feature_methods.methods as ft_methods
 CONFIG = util.load_config()
 
 """
@@ -540,17 +541,36 @@ def add_target(data):
         axis=0
     )
     df_ls = df_ls.loc[:, ['gameId', 'home_team_runs', 'away_team_runs']]
+    df_ls = df_ls.loc[(
+        (df_ls['home_team_runs'].notnull())
+        &
+        (df_ls['home_team_runs'] != "")
+        &
+        (df_ls['home_team_runs'] != None)
+    ), :]
+    df_ls = df_ls.loc[(
+        (df_ls['away_team_runs'].notnull())
+        &
+        (df_ls['away_team_runs'] != "")
+        &
+        (df_ls['away_team_runs'] != None)
+    ), :]
+    df_ls.to_csv('/Users/peteraltamura/Desktop/ls_float_error.csv', index=False)
     for col in ['home_team_runs', 'away_team_runs']:
         df_ls.loc[:, col] = df_ls[col].astype(float)
     df_ls['home_team_winner'] = (df_ls['home_team_runs'] >
                                  df_ls['away_team_runs']).astype(int)
+    print("Shape pre target merge")
+    print(data.shape)
     data = pd.merge(
         data,
         df_ls[['gameId', 'home_team_winner']],
-        how='left',
+        how='inner',
         on=['gameId'],
         validate='1:1'
     )
+    print("Shape after target merge")
+    print(data.shape)
     return data
 
 
@@ -793,7 +813,7 @@ if __name__ == "__main__":
     # Read in Line Score to get basis for each game played
     df_matchup_base = get_matchup_base_table(year)
     df_matchup_base = add_date(df_matchup_base)
-    
+
     # Narrow to immediate dimensions
     starter_table = get_starters()
     starter_table = starter_table.loc[:, [
@@ -855,6 +875,11 @@ if __name__ == "__main__":
 
     # Indicators for game number of series
     df_matchup_base = add_series_game_indicator(df_matchup_base)
+
+    # Indicators for division details of home and away team
+
+    # History of Matchup Win / Loss Pct
+    df_matchup_base = ft_methods.hist_matchup_results(df_matchup_base, years=[year])
 
     # Add Batting Stats
     df_matchup_base = add_team_batting_stats(df=df_matchup_base,

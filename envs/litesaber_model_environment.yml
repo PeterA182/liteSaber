@@ -25,3 +25,5 @@ dependencies:
   - matplotlib=3.0.3=py36_0
   - keyrings.alt=3.0=py36_0
   - scikit-learn
+  - statsmodels
+  - xgboost
