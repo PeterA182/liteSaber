@@ -323,7 +323,7 @@ if __name__ == "__main__":
 
     # Run Log (today - 1)
     min_date = dt.datetime(year=2019, month=7, day=12)
-    max_date = dt.datetime(year=2019, month=7, day=12)
+    max_date = dt.datetime(year=2019, month=9, day=16)
 
     # Run For
     run_boxscore = True
