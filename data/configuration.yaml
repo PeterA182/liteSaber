@@ -1,16 +1,16 @@
 paths:
-  raw: /Volumes/Transcend/00_gameday/
-  normalized: /Volumes/Transcend/010_gameday_normalized/
-  game_team_stats: /Volumes/Transcend/game_team_stats/
-  batter_stats: /Volumes/Transcend/020_gameday_batter_records/
-  batter_saber: /Volumes/Transcend/020_gameday_batter_saber/
-  pitcher_stats: /Volumes/Transcend/021_gameday_pitcher_records/
-  pitcher_saber: /Volumes/Transcend/020_gameday_pitcher_saber/
-  game_team_metrics: /Volumes/Transcend/game_team_metrics/
-  matchup_schedule: /Volumes/Transcend/matchup_schedule/
-  initial_featurespaces: /Volumes/Transcend/030_initial_featurespace/
-  full_featurespaces: /Volumes/Transcend/031_full_featurespace/
-  selected_featurespace: /Volumes/Transcend/032_selected_featurespace/
+  raw: /Volumes/Samsung_T5/mlb/gdApi/00_gameday/
+  normalized: /Volumes/Samsung_T5/mlb/gdApi/010_gameday_normalized/
+  game_team_stats: /Volumes/Samsung_T5/mlb/gdApi/game_team_stats/
+  batter_stats: /Volumes/Samsung_T5/mlb/gdApi/020_gameday_batter_records/
+  batter_saber: /Volumes/Samsung_T5/mlb/gdApi/020_gameday_batter_saber/
+  pitcher_stats: /Volumes/Samsung_T5/mlb/gdApi/021_gameday_pitcher_records/
+  pitcher_saber: /Volumes/Samsung_T5/mlb/gdApi/020_gameday_pitcher_saber/
+  game_team_metrics: /Volumes/Samsung_T5/mlb/gdApi/game_team_metrics/
+  matchup_schedule: /Volumes/Samsung_T5/mlb/gdApi/matchup_schedule/
+  initial_featurespaces: /Volumes/Samsung_T5/mlb/gdApi/030_initial_featurespace/
+  full_featurespaces: /Volumes/Samsung_T5/mlb/gdApi/031_full_featurespace/
+  selected_featurespace: /Volumes/Samsung_T5/mlb/gdApi/032_selected_featurespace/
   reference: /Users/peteraltamura/Documents/GitHub/litesaber/references/
 filenames:
   data_dict: data_dictionary.csv
