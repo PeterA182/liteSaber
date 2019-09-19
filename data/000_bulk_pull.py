@@ -336,8 +336,8 @@ if __name__ == "__main__":
     # Teams
     teams = []
     base_url = "http://gd2.mlb.com/components/game/mlb/"
-    base_dest = "/Volumes/Transcend/00_gameday/"
-    ref_dest = "/Volumes/Transcend/99_reference/"
+    base_dest = "/Volumes/Samsung_T5/mlb/gdApi/00_gameday/"
+    ref_dest = "/Volumes/Samsung_T5/mlb/gdApi/99_reference/"
 
     # Iterate over years
     #years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
