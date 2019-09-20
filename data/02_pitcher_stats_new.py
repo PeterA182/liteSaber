@@ -286,7 +286,6 @@ if __name__ == "__main__":
         # ------------------------------
         # Final
         for gid in list(pd.Series.unique(df_master.gameId)):
-            print(gid)
             dest_path = CONFIG.get('paths').get('pitcher_saber') + str(gid) + "/"
             if not os.path.exists(dest_path):
                 os.makedirs(dest_path)
