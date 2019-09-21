@@ -157,8 +157,8 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime.now()
-    max_date = dt.datetime.now()
+    min_date = dt.datetime.now()-dt.timedelta(days=1)
+    max_date = dt.datetime.now()-dt.timedelta(days=1)
 
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
