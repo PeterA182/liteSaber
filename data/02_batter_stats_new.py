@@ -197,8 +197,8 @@ if __name__ == "__main__":
     
     # -----------
     # Years
-    min_year = 2019
-    max_year = 2019
+    min_year = dt.datetime.now().year
+    max_year = dt.datetime.now().year
     if min_year == max_year:
         years = [min_year]
     else:
