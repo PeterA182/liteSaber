@@ -203,7 +203,7 @@ if __name__ == "__main__":
         years = [min_year]
     else:
         years = [min_year + i for i in np.arange(min_year, max_year+1, 1)]
-
+    years = [2019]
     # -----------
     # Iterate
     for yr in years:

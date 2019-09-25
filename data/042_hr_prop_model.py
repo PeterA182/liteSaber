@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+import datetime as dt
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -16,15 +17,18 @@ gridsearch = True
 
 # Param Grid
 param_grid = {
-    'min_samples_split': [3, 5, 10], 
-    'n_estimators' : [100, 300],
-    'max_depth': [3, 5, 15, 25],
-    'max_features': [3, 5, 10, 20]
+    'min_samples_split': [5, 10], 
+    'n_estimators' : [80, 100],
+    'max_depth': [3, 7, 5],
+    'max_features': [0.4, 0.6],
+    'class_weight': ['balanced_subsample']
+}
+scorers = {
+    'f1_score': make_scorer(f1_score)
 }
 
-
 # Read in
-path = '/Volumes/Samsung_T5/mlb/gdApi/99_hr_prop_ft/featurespace_all.parquet'
+path = '/Volumes/Samsung_T5/mlb/gdApi/99_hr_prop_ft/2019_09_22_hr_prop_featurespace_base2.parquet'
 df_ft = pd.read_parquet(path)
 
 # Temp - replace BABIP trail
@@ -54,10 +58,10 @@ print(y_test.shape)
 
 if brute:
     rf_clf = RandomForestClassifier(criterion='gini',
-                                    n_estimators=45,
-                                    min_samples_split=4,
-                                    min_samples_leaf=2,
-                                    max_features=0.33,
+                                    n_estimators=8,
+                                    min_samples_split=10,
+                                    min_samples_leaf=15,
+                                    max_features=0.3,
                                     oob_score=True,
                                     random_state=1,
                                     n_jobs=-1)
@@ -122,14 +126,16 @@ if brute:
     print(grid_search.best_params_)
 
 elif gridsearch:
+
+    rf_clf = RandomForestClassifier(n_jobs=-1)
     
-    def grid_search_wrapper(refit_score='precision_score'):
+    def grid_search_wrapper(refit_score='f1_score'):
         """
         fits a GridSearchCV classifier using refit_score for optimization
         prints classifier performance metrics
         """
         skf = StratifiedKFold(n_splits=10)
-        grid_search = GridSearchCV(clf, param_grid, scoring=scorers, refit=refit_score,
+        grid_search = GridSearchCV(rf_clf, param_grid, scoring=scorers, refit=refit_score,
                                cv=skf, return_train_score=True, n_jobs=-1)
         grid_search.fit(X_train.values, y_train.values)
 
@@ -148,7 +154,13 @@ elif gridsearch:
         return grid_search
 
     # Call
-    grid_search_clf = grid_search_wrapper(refit_score='precision_score')
+    grid_search_clf = grid_search_wrapper(refit_score='f1_score')
     results = pd.DataFrame(grid_search_clf.cv_results_)
-    results = results.sort_values(by='mean_test_precision_score', ascending=False)
     print(results.head())
+    results.to_csv(
+        '/Users/peteraltamura/Desktop/{}_featurespace_base_results2.csv'.format(
+            dt.datetime.now().strftime("%Y_%m_%d")
+        ),
+        index=False
+    )
+    

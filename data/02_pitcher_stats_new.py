@@ -146,12 +146,18 @@ def bf_metric(data, trails):
     """
 
     # Sort
+    print(type(data))
+    print(data.shape)
     data.sort_values(by=['pitcherId', 'gameDate', 'gameId'],
                      ascending=True,
                      inplace=True)
+    print(data.shape)
+    print("trails")
+    print(trails)
     for trail in trails:
         data['bf_trail{}'.format(trail)] = data.groupby('pitcherId')\
             ['pitcherBF'].rolling(trail).sum().reset_index(drop=True)
+    print("return cols")
     return_cols = ['pitcherId', 'gameDate', 'gameId'] + \
         [x for x in data.columns if 'bf_trail' in x]
     data = data.loc[:, return_cols]
@@ -168,10 +174,13 @@ if __name__ == "__main__":
     # Years
     min_year = dt.datetime.now().year
     max_year = dt.datetime.now().year
+
     if min_year == max_year:
-        years = [min_year]
+        years = [int(min_year)]
     else:
-        years = [min_year + i for i in np.arange(min_year, max_year+1, 1)]
+        years = [int(min_year) + i for i in np.arange(min_year, max_year+1, 1)]
+    
+    years = [2019]
 
     # -----------
     # Iterate
@@ -200,7 +209,7 @@ if __name__ == "__main__":
                 day=int(str(x[3]))
             )
         )
-        
+
         # Add Date
         df.loc[:, 'gameDate'] = pd.to_datetime(
             df['gameDate'], infer_datetime_format=True
@@ -273,6 +282,7 @@ if __name__ == "__main__":
         )
 
         # BF Metric
+        print(df.shape)
         bf_metric = bf_metric(df, trails)
         df_master = pd.merge(
             df_master,
@@ -285,12 +295,14 @@ if __name__ == "__main__":
         #
         # ------------------------------
         # Final
+        print("Iterating over gid now")
         for gid in list(pd.Series.unique(df_master.gameId)):
             dest_path = CONFIG.get('paths').get('pitcher_saber') + str(gid) + "/"
             if not os.path.exists(dest_path):
                 os.makedirs(dest_path)
             curr_master = df_master.loc[df_master['gameId'] == gid, :]
             try:
+                print("Saving File :: {}".format(str(gid)))
                 curr_master.to_csv(
                     CONFIG.get('paths').get('pitcher_saber') + \
                     '{}/pitcher_saber.csv'.format(str(gid)), index=False

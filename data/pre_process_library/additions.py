@@ -22,8 +22,7 @@ def add_team(data, path, data_table_key):
         data = add_inning_half(data)
 
     # Reset Index
-    data.reset_index(inplace=True)
-    data.drop(labels=['index'], axis=1, inplace=True)
+    data.reset_index(drop=True, inplace=True)
     
     # Add first and second team listed
     data.loc[:, 'firstTeamListed'] = data['gameId'].str.split("_").apply(

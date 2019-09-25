@@ -14,7 +14,7 @@ CONFIG = util.load_config()
 def process_date_batting(data, path):
     """
     """
-
+    
     # Rename
     data = names.rename_table(data, tablename='batting')
     data = names.remap_dtypes(data, tablename='batting')
@@ -157,9 +157,9 @@ def process_date_games(path):
 if __name__ == "__main__":
 
     # Run Log
-    min_date = dt.datetime.now()
-    max_date = dt.datetime.now()
-
+    min_date = dt.datetime.now() - dt.timedelta(days=1)
+    max_date = dt.datetime.now() - dt.timedelta(days=1)
+    
     # Iterate over years
     years = [y for y in np.arange(min_date.year, max_date.year+1, 1)]
     dates = [min_date+dt.timedelta(days=i)
@@ -168,6 +168,7 @@ if __name__ == "__main__":
     # Estalish path
     dates = [CONFIG.get('paths').get('raw') +
              dd.strftime('year_%Ymonth_%mday_%d/') for dd in dates]
+
     proc_ = mp.cpu_count()
     POOL = mp.Pool(proc_)
     r = POOL.map(process_date_games, dates)
