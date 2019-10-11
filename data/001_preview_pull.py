@@ -239,9 +239,8 @@ def scrape_game_previews(date):
         outpath + 'probableStarters.parquet'
     )
 
-if __name__ == "__main__":
 
-    # COnfiguration
+def main()
 
     # Run Log
     date = dt.datetime(year=2019, month=7, day=13)
@@ -258,3 +257,11 @@ if __name__ == "__main__":
     dates = [date]
     for dd in dates:
         scrape_game_previews(dd)
+
+    
+if __name__ == "__main__":
+    main()
+    
+
+
+

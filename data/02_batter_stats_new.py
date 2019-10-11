@@ -189,8 +189,8 @@ def pa_metric(data, trails):
     return data
 
 
-if __name__ == "__main__":
-
+def main():
+    
     # -----------
     # Trailing appearances
     trails = [3, 6]
@@ -332,3 +332,9 @@ if __name__ == "__main__":
                 CONFIG.get('paths').get('batter_saber') + \
                 '{}batter_saber_team.csv'.format(str(gid)), index=False
             )
+            
+
+if __name__ == "__main__":
+    main()
+    
+

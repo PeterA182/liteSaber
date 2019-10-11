@@ -315,11 +315,7 @@ def scrape_game_date(date):
     # GAME_EVENTS
     #
 
-
-if __name__ == "__main__":
-
-    # Configuration
-    #CONFIG = parse_config("./configuration.json")
+def main()
 
     # Run Log (today - 1)
     min_date = dt.datetime.now() - dt.timedelta(days=1)
@@ -349,6 +345,11 @@ if __name__ == "__main__":
     r = POOL.map(scrape_game_date, dates)
     POOL.close()
     POOL.join()
+    
+
+if __name__ == "__main__":
+    main()
+
 
 
 

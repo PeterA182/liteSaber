@@ -154,7 +154,7 @@ def process_date_games(path):
         )
     
 
-if __name__ == "__main__":
+def main():
 
     # Run Log
     min_date = dt.datetime.now() - dt.timedelta(days=1)
@@ -174,3 +174,8 @@ if __name__ == "__main__":
     r = POOL.map(process_date_games, dates)
     POOL.close()
     POOL.join()
+    
+
+if __name__ == "__main__":
+    main()
+

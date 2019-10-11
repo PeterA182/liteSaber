@@ -164,8 +164,8 @@ def bf_metric(data, trails):
     return data
 
 
-if __name__ == "__main__":
-
+def main():
+    
     # -----------
     # Trailing appearances
     trails = [3, 6]
@@ -316,6 +316,11 @@ if __name__ == "__main__":
                 )
             except:
                 pass
+
+
+if __name__ == "__main__":
+    main()
+
             
         
 
